@@ -2,12 +2,11 @@
 
 generator client {
   provider = "prisma-client-js"
-}   
+}
 
 datasource db {
   provider = "postgresql"
-  // La URL de conexión ahora se configura fuera del esquema en `prisma.config.*` (Prisma v7+).
-  // Asegúrate de establecer las credenciales en `prisma.config.cjs` o usar variables de entorno ahí.
+  url      = env("DATABASE_URL")
 }
 
 // ===================================================================
@@ -21,7 +20,7 @@ enum BrewStatus {
 }
 
 // ===================================================================
-// TABLAS MAESTRAS
+// MASTER TABLES
 // ===================================================================
 
 model User {
@@ -38,7 +37,7 @@ model User {
 
 model Style {
   id        String    @id @default(uuid())
-  name      String    @unique
+  name      String    @unique @db.VarChar(255) @check(name_length, "char_length(name) > 0")
   description String?
   deletedAt DateTime? @map("deleted_at")
 
@@ -63,7 +62,7 @@ model Ingredient {
 }
 
 // ===================================================================
-// RELACIONES Y TRANSACCIONES
+// RELATIONSHIPS AND TRANSACTIONS
 // ===================================================================
 
 model Recipe {
@@ -86,7 +85,7 @@ model Recipe {
   user      User      @relation(fields: [userId], references: [id])
   style     Style     @relation(fields: [styleId], references: [id])
   
-  // Relaciones
+  // Relationships
   ingredients RecipeIngredient[]
   brews       Brew[]
 
@@ -119,7 +118,7 @@ model Brew {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   user          User      @relation(fields: [userId], references: [id])
-  recipe        Recipe    @relation(fields: [recipeId], references: [id]) // RESTRICT para integridad
+  recipe        Recipe    @relation(fields: [recipeId], references: [id]) // RESTRICT for integrity
 
   ingredientsSnapshot BrewIngredient[]
 
@@ -135,6 +134,17 @@ model BrewIngredient {
   usageMoment     String?   @map("usage_moment")
 
   brew            Brew      @relation(fields: [brewId], references: [id])
+
+// All main entities and relationships are present:
+// - User
+// - Style
+// - Ingredient
+// - Recipe
+// - RecipeIngredient (pivot)
+// - Brew
+// - BrewIngredient (snapshot)
+
+// If you need to add more fields (e.g., for RecipeDetails or extra Brew status), you can extend the models.
 
   @@map("brew_ingredients")
 }

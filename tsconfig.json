@@ -29,11 +29,11 @@
   "include": [
     "src/**/*.ts",
     "test/**/*.ts",
-    "prisma.config.js", 
-    "**/*.js" 
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
+    "prismaveracaconfig.js",
+    "prisma.config.ts",
+    "**/*.js",
+    "**/*.mjs",
+    "node_modules/@prisma/client",
+    "node_modules/@nestjs/common"
   ]
 }
