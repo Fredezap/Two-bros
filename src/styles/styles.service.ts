@@ -26,8 +26,6 @@ export class StylesService {
   }
   
   async update(id: string, payload: any) {
-    console.log("Updating style with id:", id, "and payload:", payload);
-      console.log('Updating style:', { id, payload });
       try {
         return await this.prisma.style.update({
           where: { id },
@@ -37,13 +35,11 @@ export class StylesService {
         if (error.code === 'P2002' && error.meta?.target?.includes('name')) {
           throw new ConflictException('Style with this name already exists');
         }
-        console.error('Error updating style:', error);
         throw error;
       }
   }
 
   async softDelete(id: string) {
-    console.log("Soft deleting style with id:", id);
     if (!id) {
       throw new BadRequestException('Id is required');
     }
