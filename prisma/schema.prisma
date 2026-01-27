@@ -37,7 +37,7 @@ model User {
 
 model Style {
   id        String    @id @default(uuid())
-  name      String    @unique @db.VarChar(255) @check(name_length, "char_length(name) > 0")
+  name      String    @unique @db.VarChar(255)
   description String?
   deletedAt DateTime? @map("deleted_at")
 
@@ -67,13 +67,11 @@ model Ingredient {
 
 model Recipe {
   id        String    @id @default(uuid())
-  userId    String    @map("user_id")
-  styleId   String    @map("style_id")
+  userId    String?   @map("user_id")
+  styleId   String?   @map("style_id")
 
   name      String
   batchLiters Decimal @map("batch_liters") @db.Decimal(10, 3)
-  og        Decimal?  @db.Decimal(5, 3)
-  fg        Decimal?  @db.Decimal(5, 3)
   ibu       Int?
   colorSrm  Int?      @map("color_srm")
   alcoholPercent Decimal? @map("alcohol_percent") @db.Decimal(4, 2)
@@ -82,8 +80,8 @@ model Recipe {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  user      User      @relation(fields: [userId], references: [id])
-  style     Style     @relation(fields: [styleId], references: [id])
+  user      User?     @relation(fields: [userId], references: [id])
+  style     Style?    @relation(fields: [styleId], references: [id])
   
   // Relationships
   ingredients RecipeIngredient[]

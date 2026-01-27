@@ -21,19 +21,14 @@ export class StylesController {
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
   async update(@Param('id') id: string, @Body() payload: UpdateStyleDto) {
     try {
-      const a = await this.stylesService.update(id, payload);
-      console.log("Update result:", a);
-      return a;
+      return await this.stylesService.update(id, payload);
     } catch (error) {
-      console.error("Error in controller update:", error);
       throw error;
     }
   }
 // todo: a futuro, cuando ya pueda agregar cocciones, fijarme que no me deje eliminar recetas que tengan cocciones
   @Delete(':id')
   async remove(@Param('id') id: string) {
-    const a =  await this.stylesService.softDelete(id);
-  console.log("Soft delete result:", a);
-    return a
+    return await this.stylesService.softDelete(id);
   }
 }
