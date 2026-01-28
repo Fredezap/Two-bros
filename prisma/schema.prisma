@@ -43,27 +43,24 @@ model Style {
 
   recipes   Recipe[]
 
+
   @@map("styles")
 }
 
 model Ingredient {
   id        String    @id @default(uuid())
   name      String    @unique
-  type      String    
-  unitOfMeasure String @map("unit_of_measure") 
-  stock     Decimal   @default(0) @db.Decimal(10, 3) 
+  type      String
+  unitOfMeasure String @map("unit_of_measure")
+  stock     Decimal   @default(0) @db.Decimal(10, 3)
   reorderThreshold Decimal @map("reorder_threshold") @default(0) @db.Decimal(10, 3)
-  version   Int       @default(1) 
+  version   Int       @default(1)
   deletedAt DateTime? @map("deleted_at")
 
   recipeIngredients RecipeIngredient[]
-  
+
   @@map("ingredients")
 }
-
-// ===================================================================
-// RELATIONSHIPS AND TRANSACTIONS
-// ===================================================================
 
 model Recipe {
   id        String    @id @default(uuid())
@@ -82,14 +79,11 @@ model Recipe {
 
   user      User?     @relation(fields: [userId], references: [id])
   style     Style?    @relation(fields: [styleId], references: [id])
-  
-  // Relationships
   ingredients RecipeIngredient[]
   brews       Brew[]
 
   @@map("recipes")
 }
-
 model RecipeIngredient {
   recipeId    String    @map("recipe_id")
   ingredientId String @map("ingredient_id")
@@ -105,44 +99,20 @@ model RecipeIngredient {
 
 model Brew {
   id            String    @id @default(uuid())
-  userId        String    @map("user_id")
+  userId        String?   @map("user_id")
   recipeId      String    @map("recipe_id")
   batchLiters   Decimal   @map("batch_liters") @db.Decimal(10, 3)
   status        BrewStatus @default(in_progress)
   brewDate      DateTime  @map("brew_date") @default(now())
   bottlingDate  DateTime? @map("bottling_date")
   notes         String?
+  deletedAt     DateTime? @map("deleted_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  user          User      @relation(fields: [userId], references: [id])
+  user          User?     @relation(fields: [userId], references: [id])
   recipe        Recipe    @relation(fields: [recipeId], references: [id]) // RESTRICT for integrity
-
-  ingredientsSnapshot BrewIngredient[]
 
   @@map("brews")
 }
 
-model BrewIngredient {
-  id              String    @id @default(uuid())
-  brewId          String    @map("brew_id")
-  ingredientName  String    @map("ingredient_name")
-  ingredientUnitOfMeasure String @map("ingredient_unit_of_measure")
-  quantityUsed    Decimal   @map("quantity_used") @db.Decimal(10, 3)
-  usageMoment     String?   @map("usage_moment")
-
-  brew            Brew      @relation(fields: [brewId], references: [id])
-
-// All main entities and relationships are present:
-// - User
-// - Style
-// - Ingredient
-// - Recipe
-// - RecipeIngredient (pivot)
-// - Brew
-// - BrewIngredient (snapshot)
-
-// If you need to add more fields (e.g., for RecipeDetails or extra Brew status), you can extend the models.
-
-  @@map("brew_ingredients")
-}
