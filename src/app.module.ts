@@ -9,11 +9,13 @@ import { StylesService } from './styles/styles.service';
 import { StylesController } from './styles/styles.controller';
 import { RecipesController } from './recipes/recipes.controller';
 import { RecipesService } from './recipes/recipes.service';
+import { BrewController } from './brew/brew.controller';
+import { BrewService } from './brew/brew.service';
 
 @Module({
   imports: [],
-  controllers: [AppController, IngredientsController, StylesController, RecipesController],
-  providers: [AppService, PrismaService, IngredientsService, StylesService, RecipesService],
+  controllers: [AppController, IngredientsController, StylesController, RecipesController, BrewController],
+  providers: [AppService, PrismaService, IngredientsService, StylesService, RecipesService, BrewService],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
