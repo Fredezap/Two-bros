@@ -27,4 +27,7 @@ export class CreateBrewDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @IsOptional()
+  force?: boolean;
 }

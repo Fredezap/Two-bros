@@ -43,6 +43,18 @@ export class StylesService {
     if (!id) {
       throw new BadRequestException('Id is required');
     }
+
+    // Verificar si hay recetas activas asociadas a este estilo
+    const activeRecipes = await this.prisma.recipe.findMany({
+      where: {
+        styleId: id,
+        deletedAt: null,
+      },
+    });
+    if (activeRecipes.length > 0) {
+      throw new ConflictException('No se puede eliminar el estilo porque está asociado a una o más recetas activas.');
+    }
+
     try {
       return await this.prisma.style.update({
         where: { id },
