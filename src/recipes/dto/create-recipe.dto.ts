@@ -26,7 +26,13 @@ export class CreateRecipeDto {
 
   @IsOptional()
   @IsObject()
-  details?: any;
+  details?: {
+    og?: number | null;
+    fg?: number | null;
+    mashWater?: number | null;
+    spargeWater?: number | null;
+    [key: string]: any;
+  };
 
   @IsOptional()
   @IsArray()

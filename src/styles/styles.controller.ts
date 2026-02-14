@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UsePipes, ValidationPipe } from '@nestjs/common';
+import { ParseUUIDPipe } from '../pipes/parse-uuid.pipe';
 import { UpdateStyleDto } from './dto/update-style.dto';
 import { CreateStyleDto } from './dto/create-style.dto';
 import { StylesService } from './styles.service';
@@ -19,7 +20,7 @@ export class StylesController {
 
   @Put(':id')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async update(@Param('id') id: string, @Body() payload: UpdateStyleDto) {
+  async update(@Param('id', new ParseUUIDPipe()) id: string, @Body() payload: UpdateStyleDto) {
     try {
       return await this.stylesService.update(id, payload);
     } catch (error) {
@@ -28,7 +29,7 @@ export class StylesController {
   }
 // todo: a futuro, cuando ya pueda agregar cocciones, fijarme que no me deje eliminar recetas que tengan cocciones
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', new ParseUUIDPipe()) id: string) {
     return await this.stylesService.softDelete(id);
   }
 }

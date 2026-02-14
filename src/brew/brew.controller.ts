@@ -1,7 +1,9 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, UsePipes, ValidationPipe, Query, Patch } from '@nestjs/common';
+import { ParseUUIDPipe } from '../pipes/parse-uuid.pipe';
 import { BrewService } from './brew.service';
 import { CreateBrewDto } from './dto/create-brew.dto';
 import { UpdateBrewDto } from './dto/update-brew.dto';
+import type { BrewPatchDto } from './brew.service';
 
 @Controller('api/brews')
 export class BrewController {
@@ -20,7 +22,7 @@ export class BrewController {
 
   @Put(':id')
   @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
-  async update(@Param('id') id: string, @Body() payload: UpdateBrewDto) {
+  async update(@Param('id', new ParseUUIDPipe()) id: string, @Body() payload: UpdateBrewDto) {
     try {
       return await this.brewService.update(id, payload);
     } catch (error) {
@@ -29,22 +31,22 @@ export class BrewController {
   }
   
   @Post(':id/cancel')
-  async cancel(@Param('id') id: string) {
+  async cancel(@Param('id', new ParseUUIDPipe()) id: string) {
     return await this.brewService.cancel(id);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  async remove(@Param('id', new ParseUUIDPipe()) id: string) {
     return await this.brewService.remove(id);
   }
 
   @Patch(':id')
   async patchBrew(
-    @Param('id') id: string,
-    @Body() body: { status?: string; bottlingDate?: string | Date }
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: BrewPatchDto
   ) {
-    // Validar que solo se puedan modificar status y/o bottlingDate
-    const allowedFields = ['status', 'bottlingDate']
+    // Validar que solo se puedan modificar status, bottlingDate y notes
+    const allowedFields = ['status', 'bottlingDate', 'notes']
     const keys = Object.keys(body)
     if (keys.length === 0) {
       return { message: 'No data to update' }
