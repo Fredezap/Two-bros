@@ -25,6 +25,7 @@ import ResetPasswordRoute from './components/pages/ResetPasswordRoute';
 import VerifyEmailRoute from './components/pages/VerifyEmailRoute';
 
 const App: React.FC = () => {
+  console.log("finishing rebase")
   const { fetchAll } = useDataStore()
   const { darkMode } = useAppStore()
   const { user, loading } = useAuth();
@@ -32,7 +33,7 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   // todo: el fetch esta mandando el token? el fetchAll? porque me esta dando "reject" en todas las promesas
-  
+
   useEffect(() => {
     if (!loading && !user) {
       // Chequeo exacto de rutas públicas
