@@ -55,19 +55,19 @@ async create(createRecipeDto: CreateRecipeDto) {
     });
   }
 
-  async findAll() {
+  async findAll(userId: string) {
     return this.prisma.recipe.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, userId },
       include: { user: true, style: true, ingredients: true, brews: true },
     });
   }
 
-  async findOne(id: string) {
-    const recipe = await this.prisma.recipe.findUnique({
-      where: { id },
+  async findOne(id: string, userId: string) {
+    const recipe = await this.prisma.recipe.findFirst({
+      where: { id, deletedAt: null, userId },
       include: { user: true, style: true, ingredients: true, brews: true },
     });
-    if (!recipe || recipe.deletedAt) {
+    if (!recipe) {
       throw new NotFoundException('Recipe not found');
     }
     return recipe;

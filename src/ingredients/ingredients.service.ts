@@ -6,7 +6,7 @@ import { PrismaService } from '../prisma.service';
 export class IngredientsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(userId: string) {
     return this.prisma.ingredient.findMany({
       where: { deletedAt: null },
       orderBy: { name: 'asc' },

@@ -1,6 +1,12 @@
-import { Controller, Get, Post, Put, Delete, Body, Param, UsePipes, ValidationPipe, Query, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, UsePipes, ValidationPipe, Query, Patch, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
 import { ParseUUIDPipe } from '../pipes/parse-uuid.pipe';
+import { Request } from 'express';
+type JwtPayload = { sub: string; email: string };
+interface RequestWithUser extends Request {
+  user?: JwtPayload;
+}
 import { BrewService } from './brew.service';
+import { JwtAuthGuard } from '../users/jwt-auth.guard';
 import { CreateBrewDto } from './dto/create-brew.dto';
 import { UpdateBrewDto } from './dto/update-brew.dto';
 import type { BrewPatchDto } from './brew.service';
@@ -9,9 +15,12 @@ import type { BrewPatchDto } from './brew.service';
 export class BrewController {
   constructor(private readonly brewService: BrewService) {}
 
+  @UseGuards(JwtAuthGuard)
   @Get()
-  async findAll() {
-    return await this.brewService.findAll();
+  async findAll(@Req() req: RequestWithUser) {
+    const userId = req.user?.sub;
+    if (!userId) throw new UnauthorizedException('No autorizado');
+    return await this.brewService.findAll(userId);
   }
 
   @Post()

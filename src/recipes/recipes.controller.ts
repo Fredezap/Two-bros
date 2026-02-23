@@ -1,7 +1,12 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, Put, Res } from '@nestjs/common';
-import { Response } from 'express';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, Put, Res, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
+import { Response, Request } from 'express';
+type JwtPayload = { sub: string; email: string };
+interface RequestWithUser extends Request {
+  user?: JwtPayload;
+}
 import { ParseUUIDPipe } from '../pipes/parse-uuid.pipe';
 import { RecipesService } from './recipes.service';
+import { JwtAuthGuard } from '../users/jwt-auth.guard';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
 
 @Controller('api/recipes')
@@ -23,14 +28,20 @@ export class RecipesController {
     }
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
-  findAll() {
-    return this.recipesService.findAll();
+  findAll(@Req() req: RequestWithUser) {
+    const userId = req.user?.sub;
+    if (!userId) throw new UnauthorizedException('No autorizado');
+    return this.recipesService.findAll(userId);
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.recipesService.findOne(id);
+  findOne(@Param('id', new ParseUUIDPipe()) id: string, @Req() req: RequestWithUser) {
+    const userId = req.user?.sub;
+    if (!userId) throw new UnauthorizedException('No autorizado');
+    return this.recipesService.findOne(id, userId);
   }
 
   @Put(':id')
