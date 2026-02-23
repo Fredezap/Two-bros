@@ -9,10 +9,10 @@ export type BrewPatchDto = { status?: string; bottlingDate?: string | Date; note
 export class BrewService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(userId: string) {
     const brews = await this.prisma.brew.findMany({
       orderBy: { brewDate: 'desc' },
-      where: { deletedAt: null },
+      where: { deletedAt: null, userId },
       include: {
         recipe: {
           include: {

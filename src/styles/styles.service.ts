@@ -5,7 +5,7 @@ import { PrismaService } from '../prisma.service';
 export class StylesService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll() {
+  async findAll(userId: string) {
     return this.prisma.style.findMany({
       where: { deletedAt: null },
       orderBy: { name: 'asc' },

@@ -33,6 +33,7 @@ enum BrewStatus {
   cancelled
 }
 
+
 // ===================================================================
 // MASTER TABLES
 // ===================================================================
@@ -41,10 +42,21 @@ model User {
   id        String    @id @default(uuid())
   email     String    @unique
   passwordHash String @map("password_hash")
+  isEmailVerified Boolean @default(false) @map("is_email_verified")
+  verificationToken String? @map("verification_token")
+  verificationTokenExpires DateTime? @map("verification_token_expires")
+  failedLoginAttempts Int @default(0) @map("failed_login_attempts")
+  lockUntil DateTime? @map("lock_until")
+  lastLoginAt DateTime? @map("last_login_at")
+  lastLoginIp String? @map("last_login_ip")
   createdAt DateTime @default(now()) @map("created_at")
-  
+
   recipes   Recipe[]
   brews     Brew[]
+  refreshTokens RefreshToken[]
+
+  loginAttempts LoginAttempt[]
+  devices       UserDevice[]
 
   @@map("users")
 }
@@ -64,6 +76,10 @@ model Style {
 model Ingredient {
   id        String    @id @default(uuid())
   name      String
+  // ===================================================================
+  // REFRESH TOKENS
+  // ===================================================================
+  // (El modelo RefreshToken se moverá fuera de Ingredient)
   type      String
   unitOfMeasure String @map("unit_of_measure")
   stock     Decimal   @default(0) @db.Decimal(10, 3)
@@ -78,9 +94,27 @@ model Ingredient {
   @@map("ingredients")
 }
 
+// ===================================================================
+// REFRESH TOKENS (fuera de Ingredient)
+// ===================================================================
+model RefreshToken {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  tokenHash  String   @map("token_hash")
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  revokedAt  DateTime? @map("revoked_at")
+  userAgent  String?
+  ip         String?
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
 model Recipe {
   id        String    @id @default(uuid())
-  userId    String?   @map("user_id")
+  userId    String    @map("user_id")
   styleId   String?   @map("style_id")
 
   name      String
@@ -93,7 +127,7 @@ model Recipe {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  user      User?     @relation(fields: [userId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
   style     Style?    @relation(fields: [styleId], references: [id])
   ingredients RecipeIngredient[]
   brews       Brew[]
@@ -119,7 +153,7 @@ model RecipeIngredient {
 
 model Brew {
   id            String    @id @default(uuid())
-  userId        String?   @map("user_id")
+  userId        String    @map("user_id")
   recipeId      String    @map("recipe_id")
   batchLiters   Decimal   @map("batch_liters") @db.Decimal(10, 3)
   status        BrewStatus @default(in_progress)
@@ -130,9 +164,42 @@ model Brew {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  user          User?     @relation(fields: [userId], references: [id])
+  user          User      @relation(fields: [userId], references: [id])
   recipe        Recipe    @relation(fields: [recipeId], references: [id]) // RESTRICT for integrity
 
   @@map("brews")
+}
+
+// Registro de intentos de login
+model LoginAttempt {
+  id        String   @id @default(uuid())
+  userId    String?  @map("user_id")
+  email     String
+  ip        String?
+  userAgent String?
+  deviceId  String?
+  success   Boolean
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("login_attempts")
+}
+
+// Registro de dispositivos/sesiones activas
+model UserDevice {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  deviceId   String
+  deviceName String?
+  ip         String?
+  lastSeen   DateTime @default(now()) @map("last_seen")
+  createdAt  DateTime @default(now()) @map("created_at")
+  isActive   Boolean  @default(true)
+
+  user       User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, deviceId])
+  @@map("user_devices")
 }
 

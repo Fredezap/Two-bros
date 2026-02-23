@@ -11,11 +11,15 @@ import { RecipesController } from './recipes/recipes.controller';
 import { RecipesService } from './recipes/recipes.service';
 import { BrewController } from './brew/brew.controller';
 import { BrewService } from './brew/brew.service';
+import { UsersController } from './users/users.controller';
+import { UsersService } from './users/users.service';
+import { EmailService } from './users/email.service';
+import { JwtService } from './users/jwt.service';
 
 @Module({
   imports: [],
-  controllers: [AppController, IngredientsController, StylesController, RecipesController, BrewController],
-  providers: [AppService, PrismaService, IngredientsService, StylesService, RecipesService, BrewService],
+  controllers: [AppController, IngredientsController, StylesController, RecipesController, BrewController, UsersController],
+  providers: [AppService, PrismaService, IngredientsService, StylesService, RecipesService, BrewService, UsersService, EmailService, JwtService],
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
