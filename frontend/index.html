@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrewPilot App</title>
+    <!-- Incluimos Tailwind CSS vía CDN para asegurar estilos de prototipado. -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // CRÍTICO: Configuración de Tailwind para usar el modo oscuro basado en clases (requerido por App.jsx)
+      tailwind.config = {
+        darkMode: 'class', 
+        theme: {
+          extend: {},
+        },
+      }
+    </script>
+    <style>
+        /* Estilos base */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+        /* Estilo para inputs deshabilitados en dark mode */
+        input:disabled, select:disabled, textarea:disabled {
+            opacity: 1;
+        }
+        /* Garantiza que la altura del root y html se extienda para que min-h-screen funcione */
+        html, #root {
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <!-- LÍNEA CRÍTICA: Carga del módulo principal de React -->
+    <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
