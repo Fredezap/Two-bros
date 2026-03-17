@@ -1,9 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { X, RotateCcw, ChevronLeft, Clock, Thermometer, Maximize2, Trash2, Edit, Save, Utensils, SquarePen, AlertTriangle, Beer } from 'lucide-react';
-import { ActionConfirmationModal, SectionContainer, IngredientAdder } from './common/CommonModals';
-import { BeerGlassIcon, BarleyIcon, HopFlowerIcon, MashingVesselIcon, KettleIcon } from './common/Icons';
-import type { CSSProperties } from 'react';
-import { recipeService, brewService } from '../services/logic';
+import { defaultDetails, getDefaultRecipeName } from './RecipeFormModal/common/helpers';
+import { brewService } from '../services/logic';
 import useDataStore from '../stores/useDataStore';
 import useModalStore from '../stores/useModalStore';
 import { useNavigate } from 'react-router-dom';
@@ -13,49 +10,46 @@ import recipesApi from '../services/api/recipes';
 import brewsApi from '../services/api/brews';
 import { BREW_STATUS } from '../types';
 import ingredientsApi from '../services/api/ingredients';
+import NotFoundModal from './RecipeFormModal/common/NotFoundModal';
+import RecipeFormHeader from './RecipeFormModal/common/RecipeFormHeader';
+import RecipeFormMainDetails from './RecipeFormModal/common/RecipeFormMainDetails';
+import RecipeFormSections from './RecipeFormModal/common/RecipeFormSections';
+import DeleteConfirmationModal from './RecipeFormModal/common/DeleteConfirmationModal';
+import ScaleRecipeModal from './RecipeFormModal/common/ScaleRecipeModal';
+import handleClone from './RecipeFormModal/common/handlers/handleClone';
+import { useUserStore } from '../stores/useUserStore';
 
 interface RecipeFormModalProps {
     initialEditMode?: boolean;
     onClose?: () => void;
 }
+
 const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onClose }) => {
-            // Handler para editar notas
-            const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-                const value = e.target.value;
-                setFormData(prev => ({ ...prev, details: { ...prev.details, notes: value } }));
-            };
+    // Ref para guardar la receta original al abrir el modal
+    const originalRecipeRef = useRef<any>(null);
+    // Handler para editar notas
+    const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+        const value = e.target.value;
+        setFormData(prev => ({ ...prev, details: { ...prev.details, notes: value } }));
+    };
 
     const { showModal, setShowModal, recipeId } = useModalStore();
+    let user = useUserStore(state => state.user);
+    if (!user) {
+        try {
+            const stored = localStorage.getItem('user-storage');
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                user = parsed.state?.user || null;
+            }
+        } catch (e) {
+            user = null;
+        }
+    }
     const { ingredients, recipes, brews, styles, setRecipes, setBrews, setIngredients } = useDataStore();
     const navigate = useNavigate();
 
     const isCreating = recipeId === null;
-    // Objeto por defecto para una receta vacía
-    const defaultDetails = { 
-        mashingTimeMinutes: null, 
-        mashingTempC: null, 
-        fermentationDays: null, 
-        fermentationTempC: null, 
-        notes: '',
-        og: null, // Original Gravity
-        fg: null, // Final Gravity
-        mashWater: null, // Mash Water (L)
-        spargeWater: null // Sparge Water (L)
-    };
-    // Lógica para nombre incremental
-    function getDefaultRecipeName(recipes) {
-        const base = 'Nueva Receta';
-        const regex = new RegExp(`^${base}(?: (\d+))?$`, 'i');
-        const nums = recipes
-            .map(r => {
-                const match = r.name.match(regex);
-                return match ? (match[1] ? parseInt(match[1], 10) : 0) : null;
-            })
-            .filter(n => n !== null);
-        if (nums.length === 0) return base;
-        const maxNum = Math.max(...nums);
-        return `${base} ${maxNum + 1}`;
-    }
     const defaultRecipe = {
         id: '',
         name: isCreating ? getDefaultRecipeName(recipes) : 'Error',
@@ -65,7 +59,6 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
         ibu: null,
         alcoholPercent: null,
         colorSrm: null,
-        ingredients: [],
         details: defaultDetails,
         deletedAt: null,
     };
@@ -73,9 +66,10 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
 
 
     const initialRecipe = useMemo(() => {
+        const deepClone = obj => JSON.parse(JSON.stringify(obj));
         if (isCreating) {
             // Siempre usar un objeto base fijo para nuevas recetas
-            return { ...defaultRecipe };
+            return deepClone(defaultRecipe);
         } else {
             const found = recipes.find(r => r.id === recipeId);
             const toNumber = v => (v === undefined || v === null || v === '' ? 0 : Number(v));
@@ -86,7 +80,7 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
                 if (!styleObj && styleId && Array.isArray(styles)) {
                     styleObj = styles.find(s => String(s.id) === String(styleId)) ?? null;
                 }
-                return {
+                const recipeCopy = {
                     ...found,
                     style: styleObj,
                     styleId: styleId,
@@ -115,18 +109,19 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
                         }))
                         : [],
                 };
+                return deepClone(recipeCopy);
             } else if (recipes.length > 0) {
                 const base = { ...recipes[0] };
-                return {
+                return deepClone({
                     ...base,
                     name: 'Error',
                     id: '',
                     styleId: base.styleId ?? (base.style?.id ?? null),
                     ingredients: [],
                     details: { ...defaultDetails, ...(base.details || {}) },
-                };
+                });
             } else {
-                return { ...defaultRecipe };
+                return deepClone(defaultRecipe);
             }
         }
     }, [recipeId, recipes, isCreating, styles]);
@@ -148,6 +143,8 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
 
     useEffect(() => {
         setFormData(initialRecipe);
+        // Guardar copia original al abrir el modal
+        originalRecipeRef.current = initialRecipe;
     }, [initialRecipe]);
 
     useEffect(() => {
@@ -168,11 +165,13 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
     // Forzar edición de ingredientes al crear
     const effectiveIsEditing = isCreating ? true : isEditing;
 
-    const availableIngredients = useMemo(() => ingredients.filter(i => i.deletedAt === null), [ingredients]);
+    const availableIngredients = useMemo(() => Array.isArray(ingredients) ? ingredients.filter(i => i.deletedAt === null) : [], [ingredients]);
     const handleClose = () => {
         setDeletingRecipe(null);
         setDeleteError(null);
         setStatusMessage(null);
+        // Restaurar datos originales si se cierra sin guardar
+        setFormData(originalRecipeRef.current);
         if (!isCreating) setIsEditing(false);
         setIsScaling(false);
         // Al cerrar, asegurarse de que todo modal secundario esté cerrado
@@ -256,41 +255,43 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
     const [newIngredientIndex, setNewIngredientIndex] = useState(null);
     const handleIngredientChange = useCallback((index, field, value, type = 'number') => {
         setFormData(prev => {
-            const newIngredients = [...prev.ingredients];
-            const newIngredient = { ...newIngredients[index] };
-            if (field === 'quantity') {
-                // Lógica similar a handleMainChange para inputs numéricos
-                let parsedValue = value;
-                if (type === 'number') {
-                    if (value === '' || value === undefined) {
-                        parsedValue = '';
-                    } else {
-                        parsedValue = value.toString().replace(/^0+(?=\d)/, ''); // Quitar ceros a la izquierda
-                        parsedValue = parseFloat(parsedValue);
-                        if (isNaN(parsedValue)) parsedValue = '';
+            console.log('[DEBUG] Ingredientes antes de cambio', prev.ingredients);
+            const newIngredients = prev.ingredients.map((ing, i) => {
+                if (i !== index) return ing;
+                let updated = { ...ing };
+                if (field === 'quantity') {
+                    let parsedValue = value;
+                    if (type === 'number') {
+                        if (value === '' || value === undefined) {
+                            parsedValue = '';
+                        } else {
+                            parsedValue = value.toString().replace(/^0+(?=\d)/, '');
+                            parsedValue = parseFloat(parsedValue);
+                            if (isNaN(parsedValue)) parsedValue = '';
+                        }
                     }
-                }
-                newIngredient.quantity = parsedValue;
-            } else if (field === 'usageMoment') {
-                newIngredient.usageMoment = value;
-            } else if (field === 'time') {
-                let parsedValue = value;
-                if (type === 'number') {
-                    if (value === '' || value === undefined) {
-                        parsedValue = '';
-                    } else {
-                        parsedValue = value.toString().replace(/^0+(?=\d)/, '');
-                        parsedValue = parseInt(parsedValue);
-                        if (isNaN(parsedValue)) parsedValue = '';
+                    updated.quantity = parsedValue;
+                } else if (field === 'usageMoment') {
+                    updated.usageMoment = value;
+                } else if (field === 'time') {
+                    let parsedValue = value;
+                    if (type === 'number') {
+                        if (value === '' || value === undefined) {
+                            parsedValue = '';
+                        } else {
+                            parsedValue = value.toString().replace(/^0+(?=\d)/, '');
+                            parsedValue = parseInt(parsedValue);
+                            if (isNaN(parsedValue)) parsedValue = '';
+                        }
                     }
+                    updated.time = parsedValue;
+                } else if (field === 'timeUnit') {
+                    updated.timeUnit = value;
                 }
-                newIngredient.time = parsedValue;
-            } else if (field === 'timeUnit') {
-                newIngredient.timeUnit = value;
-            }
-            newIngredients[index] = newIngredient;
-            const updated = { ...prev, ingredients: newIngredients };
-            return updated;
+                return updated;
+            });
+            console.log('[DEBUG] Ingredientes después de cambio', newIngredients);
+            return { ...prev, ingredients: newIngredients };
         });
     }, []);
 
@@ -319,12 +320,15 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
                 ingredientStock: ingredient.stock,
             };
         }
-        setFormData(prev => ({ ...prev, ingredients: [...prev.ingredients, newIngredientEntry] }));
+        setFormData(prev => ({
+            ...prev,
+            ingredients: Array.isArray(prev.ingredients) ? [...prev.ingredients, newIngredientEntry] : [newIngredientEntry]
+        }));
         setStatusMessage({ type: 'success', message: `Ingrediente ${ingredient.name} añadido a la receta.` });
         setTimeout(() => setStatusMessage(null), 3000);
     };
 
-        // Limpiar el índice de autoFocus después de enfocar
+    // Limpiar el índice de autoFocus después de enfocar
     useEffect(() => {
         if (newIngredientIndex !== null) {
             const timeout = setTimeout(() => setNewIngredientIndex(null), 500);
@@ -332,14 +336,15 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
         }
     }, [newIngredientIndex]);
 
-    const handleRemoveIngredient = (index) => {
-        const newIngredients = formData.ingredients.filter((_, i) => i !== index);
-        setFormData(prev => ({ ...prev, ingredients: newIngredients }));
+    const handleRemoveIngredient = (ingredientIndex) => {
+        setFormData(prev => ({
+            ...prev,
+            ingredients: prev.ingredients.filter((_, i) => i !== ingredientIndex)
+        }));
     };
 
     const handleSave = async() => {
         try {
-            // Solo enviar los campos válidos y styleId (nunca style) al backend
             const allowedFields = {
                 name: 'string',
                 batchLiters: 'number',
@@ -392,7 +397,12 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
                 payload.styleId = null;
             }
             // Log del payload antes de enviar
+            console.log("user al guardar receta:", user);
             if (isCreating) {
+                if (user) {
+                    payload.userId = user.id;
+                }
+                console.log('[RecipeFormModal] Payload enviado:', JSON.stringify(payload, null, 2));
                 await recipesApi.create(payload);
             } else {
                 await recipesApi.update(formData.id, payload);
@@ -403,6 +413,7 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
             toast.success(isCreating ? 'Receta creada con éxito!' : 'Receta actualizada con éxito!');
             handleClose();
         } catch (error) {
+            console.log("[ERROR] Al guardar receta:", error);
             toast.error(isCreating ? `Error al guardar: ${error.response?.data?.message || error.message}` :
             `Error al actualizar: ${error.response?.data?.message || error.message}`);
         }
@@ -453,7 +464,8 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
                 brewDate: new Date().toISOString(),
                 // Solo guardar nota si existe
                 notes: formData.details.notes && formData.details.notes.trim() !== '' ? formData.details.notes : undefined,
-                ...(force ? { force: true } : {})
+                ...(force ? { force: true } : {}),
+                userId: user?.id ?? null
             };
             await brewsApi.create(brewPayload);
             // Refrescar brews desde backend
@@ -553,46 +565,14 @@ const handleScale = async () => {
     }
 };
 
-    const handleClone = async () => {
-        try {
-            // Preparar payload para backend (sin id, deletedAt, brews, etc) con nombre único incremental
-            const baseName = `Clonación ${formData.name}`;
-            let cloneName = baseName;
-            const regex = new RegExp(`^${baseName}(?: (\\d+))?$`);
-            const nums = recipes
-                .map(r => {
-                    const match = r.name.match(regex);
-                    return match ? (match[1] ? parseInt(match[1], 10) : 1) : null;
-                })
-                .filter(n => n !== null);
-            if (nums.length > 0) {
-                const maxNum = Math.max(...nums);
-                cloneName = `${baseName} ${maxNum + 1}`;
-            }
-            const { id, deletedAt, brews, ...payload } = {
-                ...formData,
-                name: cloneName
-            };
-            // El backend espera styleId, no style
-            if (payload.style && payload.style.id) {
-                payload.styleId = payload.style.id;
-            }
-            delete payload.style;
-            ['userId', 'createdAt', 'updatedAt', 'user'].forEach(k => delete payload[k]);
-            
-            // Crear en backend
-            await recipesApi.create(payload);
-            // Actualizar recetas desde backend
-            const allRecipes = await recipesApi.getAll();
-            setRecipes && setRecipes(allRecipes);
-            toast.success(`¡Receta clonada como 'Clonación ${formData.name}'!`);
-            navigate(ROUTES.HOME);
-            setShowModal(false);
-        } catch (error: any) {
-            toast.error(`Error al clonar: ${error.response?.data?.message || error.message}`);
-        }
-    };
-    
+    const handleCloneWrapper = () => handleClone({
+        formData,
+        recipes,
+        setRecipes,
+        navigate,
+        setShowModal
+    });
+
     const handleStartEdit = () => {
         if (hasRelatedBrews) {
             setStatusMessage({ type: 'error', message: 'Edición de ingredientes bloqueada por cocciones registradas. Usa el botón "Clonar y Editar" si necesitas hacer cambios.' });
@@ -614,137 +594,14 @@ const handleScale = async () => {
         { value: 'minutes', label: 'Minutos' },
         { value: 'days', label: 'Días' },
     ];
-    const IngredientRow = ({ ingredient, index, isEditing, availableIngredients, onIngredientChange, autoFocus }) => {
-        const fullIngredient = availableIngredients.find(i => i.id === ingredient.ingredientId);
-        const nonEditableStyle: CSSProperties = { cursor: 'default', userSelect: 'none' };
-        const getTypeIcon = (type) => {
-            switch(type) {
-                case 'malt': return <BarleyIcon className="w-4 h-4 mr-2"/>;
-                case 'hop': return <HopFlowerIcon className="w-4 h-4 mr-2"/>;
-                case 'yeast': return <Beer className="w-4 h-4 mr-2 text-red-600 dark:text-red-400"/>;
-                default: return <Beer className="w-4 h-4 mr-2 text-gray-600 dark:text-gray-400"/>;
-            }
-        }
-        // Refs para los inputs editables
-        const cantidadRef = useRef(null);
-        const tiempoRef = useRef(null);
-        useEffect(() => {
-            if (isEditing && autoFocus) {
-                if (cantidadRef.current) {
-                    cantidadRef.current.focus();
-                } else if (tiempoRef.current) {
-                    tiempoRef.current.focus();
-                }
-            }
-        }, [isEditing, autoFocus]);
-        return (
-            <div className="flex items-center border-b border-gray-100 dark:border-gray-700 p-2">
-                <div className="flex w-[95%] justify-around items-center gap-3">
-                    <div className="w-full h-10 flex items-center font-semibold text-gray-800 dark:text-gray-200" style={nonEditableStyle}>
-                        {fullIngredient ? (
-                            <>
-                                {getTypeIcon(fullIngredient.type)}
-                                {fullIngredient.name}
-                            </>
-                        ) : 'Ingrediente no encontrado'}
-                    </div>
-                    <div className="w-full h-10 flex items-center">
-                        <span className="text-sm text-gray-500 block md:hidden">Cantidad:</span>
-                        {isEditing ? (
-                            <input
-                                ref={cantidadRef}
-                                type="number"
-                                step="0.01"
-                                value={ingredient.quantity === null || ingredient.quantity === undefined ? '' : ingredient.quantity}
-                                onChange={(e) => onIngredientChange(index, 'quantity', e.target.value)}
-                                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-right text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500"
-                                autoFocus={autoFocus}
-                            />
-                        ) : (
-                            <p className="text-right font-mono text-gray-800 dark:text-gray-200 select-none" style={nonEditableStyle}>{ingredient.quantity?.toFixed(2)} {fullIngredient?.unitOfMeasure?.toUpperCase()}</p>
-                        )}
-                    </div>
-                    {/* Solo para lúpulos: momento de uso, tiempo y unidad */}
-                    {fullIngredient?.type === 'hop' && (
-                        <>
-                        <div className="w-full h-10 flex items-center">
-                            <span className="text-sm text-gray-500 block md:hidden">Uso:</span>
-                            {isEditing ? (
-                                <select
-                                    value={ingredient.usageMoment || 'boil'}
-                                    onChange={e => onIngredientChange(index, 'usageMoment', e.target.value)}
-                                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500"
-                                >
-                                    {USAGE_MOMENT_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <p className="text-sm text-gray-600 italic dark:text-gray-400 select-none" style={nonEditableStyle}>{USAGE_MOMENT_OPTIONS.find(opt => opt.value === ingredient.usageMoment)?.label || ingredient.usageMoment}</p>
-                            )}
-                        </div>
-                        <div className="w-full h-10 flex items-center">
-                            <span className="text-sm text-gray-500 block md:hidden">Tiempo:</span>
-                            {isEditing ? (
-                                <input
-                                    ref={tiempoRef}
-                                    type="number"
-                                    min="0"
-                                    value={ingredient.time ?? ''}
-                                    onChange={e => onIngredientChange(index, 'time', e.target.value)}
-                                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500"
-                                    placeholder="Tiempo"
-                                    autoFocus={autoFocus && !cantidadRef.current}
-                                />
-                            ) : (
-                                <span className="text-sm text-gray-800 dark:text-gray-200 select-none" style={nonEditableStyle}>
-                                    {ingredient.time ? `${ingredient.time}` : '-'}
-                                </span>
-                            )}
-                        </div>
-                        <div className="w-full h-10 flex items-center">
-                            <span className="text-sm text-gray-500 block md:hidden">Unidad:</span>
-                            {isEditing ? (
-                                <select
-                                    value={ingredient.timeUnit || 'minutes'}
-                                    onChange={e => onIngredientChange(index, 'timeUnit', e.target.value)}
-                                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500"
-                                >
-                                    {TIME_UNIT_OPTIONS.map(opt => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <span className="text-sm text-gray-800 dark:text-gray-200 select-none" style={nonEditableStyle}>
-                                    {ingredient.time ? `${TIME_UNIT_OPTIONS.find(opt => opt.value === ingredient.timeUnit)?.label || ''}` : ''}
-                                </span>
-                            )}
-                        </div>
-                        </>
-                    )}
-                </div>
-                <div className="flex w-[5%] h-10 items-center justify-end">
-                    {(isEditing || isCreating) && (
-                        <button onClick={() => handleRemoveIngredient(index)} className="w-full text-red-500 hover:text-red-700 dark:hover:text-red-400 p-1 rounded transition flex items-center justify-center">
-                            <X className="w-4 h-4 inline" />
-                        </button>
-                    )}
-                </div>
-            </div>
-        );
-    };
+    // ...IngredientRow ahora está modularizado...
 
      // Solo renderizar si el modal está abierto
     if (!showModal) return null;
 
     if (initialRecipe.id !== '' && !recipes.find(r => r.id === recipeId)) {
         return (
-            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-start justify-center p-4 z-50" onClick={handleClose}>
-                <div className="p-10 text-center bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-sm w-full my-8" onClick={e => e.stopPropagation()}>
-                    <h1 className="text-3xl font-bold text-red-600 dark:text-red-400">Receta no encontrada</h1>
-                    <button onClick={handleClose} className="mt-4 text-indigo-600 dark:text-indigo-400 hover:underline">Volver a Mis Recetas</button>
-                </div>
-            </div>
+            <NotFoundModal show={true} onClose={handleClose} />
         );
     }
     
@@ -775,460 +632,75 @@ const handleScale = async () => {
                 role="dialog"
                 aria-modal="true"
             >
+                <RecipeFormHeader
+                    onClose={handleClose}
+                    isCreating={isCreating}
+                    isEditing={isEditing}
+                    isReadyToCook={isReadyToCook}
+                    onClone={handleCloneWrapper}
+                    onSave={handleSave}
+                    onStartEdit={handleStartEdit}
+                    onCancelEdit={() => setIsEditing(false)}
+                    onCook={handleCook}
+                    onDelete={handleStartDelete}
+                    statusMessage={statusMessage}
+                    showStockCheck={showStockCheck}
+                    stockCheckResult={stockCheckResult}
+                    showForceWarning={showForceWarning}
+                    setShowStockCheck={setShowStockCheck}
+                    setShowForceWarning={setShowForceWarning}
+                    confirmCook={confirmCook}
+                />
                 
-                {/* Header del Modal */}
-                <header className="bg-white dark:bg-gray-800 p-6 rounded-t-xl shadow-lg border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10">
-                    <div className="relative flex justify-center items-center">
-                        
-                        {/* Flecha para Atrás (Cerrar) */}
-                        <button onClick={handleClose} className="absolute left-0 p-2 text-gray-600 dark:text-gray-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition">
-                            <ChevronLeft className="w-6 h-6"/>
-                                    </button>
-                    </div>
-                </header>
-
-                <div className="p-6 md:p-8">
-                    
-                    {/* Botones de Acción */}
-                    <div className="mb-8 flex flex-wrap gap-3 justify-end">
-
-                        {!isCreating && (
-                            <button onClick={handleClone} className="flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-md">
-                                <SquarePen className="w-5 h-5 mr-2" /> CLONAR
-                            </button>
-                        )}
-                        
-                        {(isEditing || isCreating) && (
-                            <button onClick={handleSave} className="flex items-center px-4 py-2 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition shadow-md">
-                                <Save className="w-5 h-5 mr-2" /> GUARDAR RECETA
-                            </button>
-                        )}
-                        
-                        {!isCreating && (
-                            <button 
-                                onClick={isEditing ? () => setIsEditing(false) : handleStartEdit}
-                                className={`flex items-center px-4 py-2 font-semibold rounded-lg transition shadow-md 
-                                    ${isEditing ? 'bg-gray-400 text-gray-800 hover:bg-gray-500 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`}>
-                                {isEditing ? (
-                                    <><X className="w-5 h-5 mr-2" /> Cancelar Edición</>
-                                ) : (
-                                    <><Edit className="w-5 h-5 mr-2" /> Editar</>
-                                )}
-                            </button>
-                        )}
-
-                        {isReadyToCook && (
-                             <button onClick={handleCook} className="flex items-center px-4 py-2 bg-yellow-600 text-white font-semibold rounded-lg hover:bg-yellow-700 transition shadow-md">
-                                <Utensils className="w-5 h-5 mr-2" /> COCINAR (Iniciar Brew)
-                            </button>
-                        )}
-                        
-                        {!isCreating && (
-                            <button onClick={handleStartDelete} className="flex items-center px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition shadow-md">
-                                <Trash2 className="w-5 h-5 mr-2" /> ELIMINAR
-                            </button>
-                        )}
-                    </div>
-                    {statusMessage && (
-                        <div className={`m-4 p-3 rounded-lg ${statusMessage.type === 'success' ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : (statusMessage.type === 'warning' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' : 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300')}`}>
-                            {statusMessage.message}
-                        </div>
-                    )}
-                    {showStockCheck && stockCheckResult && (
-                        <div className="m-4 p-4 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-lg relative">
-                            <button onClick={() => setShowStockCheck(false)} className="absolute top-2 right-2 text-gray-400 hover:text-red-500 text-xl">×</button>
-                            <h3 className="text-lg font-bold mb-2">Estado de Stock para esta Cocción</h3>
-                            <ul className="space-y-2">
-                                {stockCheckResult.map((item, idx) => (
-                                    <li key={idx} className="flex items-center gap-2">
-                                        {item.ok ? (
-                                            <span className="text-green-600">✔️</span>
-                                        ) : (
-                                            <span className="text-red-600">❌</span>
-                                        )}
-                                        <span className="font-semibold">{item.name}</span>:
-                                        <span>{item.requerido} {item.unidad} necesarios</span>
-                                        <span className="mx-2">|</span>
-                                        <span className={item.ok ? 'text-green-700' : 'text-red-700'}>
-                                            {item.disponible} {item.unidad} en stock
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
-                            {stockCheckResult.some(item => !item.ok) && !showForceWarning && (
-                                <div className="flex justify-end mt-4 gap-2">
-                                    <button onClick={() => setShowStockCheck(false)} className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-400 dark:hover:bg-gray-600 transition">Cancelar</button>
-                                    <button onClick={() => setShowForceWarning(true)} className="px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition">Forzar Cocción</button>
-                                </div>
-                            )}
-                            {stockCheckResult.every(item => item.ok) && (
-                                <div className="flex justify-end mt-4 gap-2">
-                                    <button onClick={() => setShowStockCheck(false)} className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-400 dark:hover:bg-gray-600 transition">Cancelar</button>
-                                    <button onClick={() => confirmCook(false)} className="px-4 py-2 bg-yellow-600 text-white rounded-lg font-semibold hover:bg-yellow-700 transition">Confirmar Cocción</button>
-                                </div>
-                            )}
-                            {showForceWarning && (
-                                <div className="mt-4 p-3 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded-lg">
-                                    <p className="font-bold mb-2">¡Atención!</p>
-                                    <p>El stock de los ingredientes insuficientes quedará en negativo si continúas.</p>
-                                    <ul className="mt-2 mb-2 list-disc list-inside">
-                                        {stockCheckResult.filter(item => !item.ok).map((item, idx) => (
-                                            <li key={idx}>{item.name}: faltan {item.requerido - item.disponible} {item.unidad}</li>
-                                        ))}
-                                    </ul>
-                                    <div className="flex justify-end gap-2 mt-2">
-                                        <button onClick={() => setShowForceWarning(false)} className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-lg font-semibold hover:bg-gray-400 dark:hover:bg-gray-600 transition">Cancelar</button>
-                                        <button onClick={() => confirmCook(true)} className="px-4 py-2 bg-red-700 text-white rounded-lg font-semibold hover:bg-red-800 transition">Confirmar y Forzar</button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                
-                    {/* Contenido Principal de Receta */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* COLUMNA 1: Métricas y Detalles Principales */}
-                        <div className="lg:col-span-1 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl space-y-4">
-                            <h2 className="text-xl font-extrabold text-indigo-700 dark:text-indigo-400 border-b-2 border-indigo-200 dark:border-indigo-700 pb-2 mb-4 flex items-center justify-between">
-                                <span><Beer className="w-5 h-5 mr-2 inline"/> FICHA TÉCNICA</span>
-                            </h2>
-                            
-                            {/* Nombre (Estilo Mejorado) */}
-                            <div className="pb-3 border-b border-gray-100 dark:border-gray-700">
-                                {(isEditing || isCreating) ? (
-                                    <input type="text" name="name" value={formData.name} onChange={handleMainChange}
-                                        className="w-full p-1 border border-gray-300 dark:border-gray-600 text-2xl font-extrabold text-gray-800 dark:text-gray-100 text-center focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800" />
-                                ) : (
-                                    <p className="text-2xl font-extrabold text-gray-800 dark:text-gray-100 text-center select-none" style={{ cursor: 'default' }}>{formData.name}</p>
-                                )}
-                            </div>
-                            
-                            {/* Estilo */}
-                            <div>
-                                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Estilo</label>
-                                {(isEditing || isCreating) ? (
-                                    <select name="style" value={formData.styleId ? String(formData.styleId) : ''} onChange={handleMainChange}
-                                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500">
-                                        <option value="">Sin estilo</option>
-                                        {styles.filter(s => s.deletedAt === null).map(s => (
-                                            <option key={s.id} value={String(s.id)}>{s.name}</option>
-                                        ))}
-                                    </select>
-                                ) : (
-                                    <p className="text-lg font-semibold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>
-                                        {(() => {
-                                            return formData.style?.name || 'Sin estilo';
-                                        })()}
-                                    </p>
-                                )}
-                            </div>
-
-                            {/* 4. Métrica: Batch Final (Litros) - Solo input */}
-                            <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-700 pb-2">
-                                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Batch Final (L)</label>
-                                {(isEditing || isCreating) ? (
-                                    <input type="number" step="0.1" name="batchLiters" value={formData.batchLiters === 0 || formData.batchLiters === null ? '' : formData.batchLiters} onChange={handleMainChange}
-                                        className="w-24 p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg text-right bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500" />
-                                ) : (
-                                    <div className="flex items-center space-x-2">
-                                        <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400 select-none" style={{ cursor: 'default' }}>{formData.batchLiters} L</p>
-                                    </div>
-                                )}
-                            </div>
-                            
-                            {/* Métricas Fijas */}
-                            {[
-                                { label: 'IBU', key: 'ibu', unit: '' },
-                                { label: 'Alcohol (%)', key: 'alcoholPercent', unit: '%' },
-                            ].map(({ label, key, unit }) => (
-                                <div key={key} className="flex justify-between items-center">
-                                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</label>
-                                    {(isEditing || isCreating) ? (
-                                        <input type="number" step="0.1" name={key} value={formData[key] ?? ''} onChange={handleMainChange}
-                                            className="w-24 p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg text-right bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500" />
-                                    ) : (
-                                        <p className="text-lg font-bold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>{Number(formData[key] ?? 0).toFixed(key === 'alcoholPercent' ? 2 : 0)} {unit}</p>
-                                    )}
-                                </div>
-                            ))}
-
-                            {/* OG, FG, Mash Water, Sparge Water */}
-                            {[
-                                { label: 'OG', key: 'og', unit: '', details: true },
-                                { label: 'FG', key: 'fg', unit: '', details: true },
-                                { label: 'Mash Water (L)', key: 'mashWater', unit: '', details: true },
-                                { label: 'Sparge Water (L)', key: 'spargeWater', unit: '', details: true },
-                            ].map(({ label, key, unit }) => (
-                                <div key={key} className="flex justify-between items-center">
-                                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</label>
-                                    {(isEditing || isCreating) ? (
-                                        <input type="number" step="any" name={key} value={formData.details?.[key] ?? ''} onChange={e => setFormData((prev: any) => ({ ...prev, details: { ...prev.details, [key]: e.target.value === '' ? null : Number(e.target.value) } }))}
-                                            className="w-24 p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg text-right bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500" />
-                                    ) : (
-                                        <p className="text-lg font-bold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>{formData.details?.[key] ?? '—'} {unit}</p>
-                                    )}
-                                </div>
-                            ))}
-                            
-                            {/* Color SRM - Icono y Valor */}
-                            <div className="flex justify-between items-center pt-2">
-                                <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Color (SRM)</label>
-                                <div className="flex items-center space-x-2">
-                                    <BeerGlassIcon srm={formData.colorSrm} />
-                                    {(isEditing || isCreating) ? (
-                                        <input type="number" step="1" name="colorSrm" value={formData.colorSrm === 0 || formData.colorSrm === null ? '' : formData.colorSrm} onChange={handleMainChange}
-                                            className="w-16 p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg text-right bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500" />
-                                    ) : (
-                                        <p className="text-lg font-bold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>{formData.colorSrm} SRM</p>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Botón Escalar Receta: siempre disponible si no es creación */}
-                            {!isCreating && (
-                                <div className="flex justify-end pt-4">
-                                    <button
-                                        onClick={() => { setIsScaling(true); setNewBatchSize(formData.batchLiters); }}
-                                        className="flex items-center px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition shadow-md"
-                                    >
-                                        <Maximize2 className="w-5 h-5 mr-2" /> Escalar Receta
-                                    </button>
-                                </div>
-                            )}
-                            
-                            {/* Icono de advertencia de edición */}
-                            {hasRelatedBrews && !isEditing && (
-                                <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/50 rounded-lg text-red-700 dark:text-red-300 text-sm flex items-center">
-                                    <AlertTriangle className="w-5 h-5 mr-2"/> Edición de ingredientes bloqueada.
-                                </div>
-                            )}
-
-                        </div>
-
-                        {/* COLUMNA 2 Y 3: Ingredientes y Detalles */}
-                        <div className="lg:col-span-2 space-y-8">
-                            
-                            {/* SECCIÓN MACERACIÓN (Maltas) */}
-                            <SectionContainer title="Maceración" icon={<MashingVesselIcon className="w-5 h-5"/>}>
-                                {/* Tiempos y Temperaturas de Maceración */}
-                                <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-4 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="flex items-center">
-                                            <Clock className="w-4 h-4 mr-2 text-indigo-500 dark:text-indigo-400"/>
-                                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tiempo</label>
-                                            {(isEditing || isCreating) ? (
-                                                <input type="number" step="5" name="mashingTimeMinutes" value={formData.details.mashingTimeMinutes} onChange={handleDetailsChange}
-                                                    className="w-16 p-1 border border-gray-300 dark:border-gray-600 rounded ml-2 text-right text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-                                            ) : (
-                                                <p className="ml-2 font-bold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>
-                                                    {formData.details.mashingTimeMinutes > 0 ? `${formData.details.mashingTimeMinutes} min` : 'No definido'}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center">
-                                            <Thermometer className="w-4 h-4 mr-2 text-red-500 dark:text-red-400"/>
-                                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Temperatura</label>
-                                            {(isEditing || isCreating) ? (
-                                                <input type="number" step="1" name="mashingTempC" value={formData.details.mashingTempC} onChange={handleDetailsChange}
-                                                    className="w-16 p-1 border border-gray-300 dark:border-gray-600 rounded ml-2 text-right text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-                                            ) : (
-                                                <p className="ml-2 font-bold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>
-                                                    {formData.details.mashingTempC > 0 ? `${formData.details.mashingTempC} °C` : 'No definido'}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Ingredientes (Maltas):</p>
-                                {formData.ingredients
-                                    .filter(ri => availableIngredients.find(i => i.id === ri.ingredientId)?.type === 'malt')
-                                    .map((ri, index) => (
-                                        <IngredientRow 
-                                            key={ri.ingredientId + index} 
-                                            ingredient={ri} 
-                                            index={formData.ingredients.indexOf(ri)}
-                                            isEditing={effectiveIsEditing && canEditIngredients}
-                                            availableIngredients={availableIngredients}
-                                            onIngredientChange={handleIngredientChange}
-                                            autoFocus={newIngredientIndex === formData.ingredients.indexOf(ri)}
-                                        />
-                                    ))}
-                                {(isEditing || isCreating) && canEditIngredients && (
-                                    <IngredientAdder 
-                                        availableIngredients={availableIngredients.filter(i => i.type === 'malt')}
-                                        onAdd={(id) => {
-                                            handleAddIngredient(id, 'malt');
-                                            // El nuevo ingrediente siempre se agrega al final
-                                            setTimeout(() => {
-                                                setNewIngredientIndex(formData.ingredients.length);
-                                            }, 0);
-                                        }}
-                                    />
-                                )}
-                            </SectionContainer>
-                            
-                            {/* SECCIÓN COCCIÓN (Lúpulos) */}
-                            <SectionContainer title="Cocción / Lúpulos" icon={<KettleIcon className="w-5 h-5"/>}>
-                                {/* Tiempo general de cocción */}
-                                <div className="flex items-center mb-2">
-                                    <Clock className="w-4 h-4 mr-2 text-indigo-500 dark:text-indigo-400"/>
-                                    <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Tiempo de Cocción (min)</label>
-                                    {(isEditing || isCreating) ? (
-                                        <input type="number" step="5" name="boilTimeMinutes" value={formData.details.boilTimeMinutes || ''} onChange={handleDetailsChange}
-                                            className="w-16 p-1 border border-gray-300 dark:border-gray-600 rounded ml-2 text-right text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-                                    ) : (
-                                        <p className="ml-2 font-bold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>
-                                            {formData.details.boilTimeMinutes > 0 ? `${formData.details.boilTimeMinutes} min` : 'No definido'}
-                                        </p>
-                                    )}
-                                </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Momento clave: Boil (60/90min), HopStand/Whirlpool (temp/tiempo), DryHop (días).</p>
-                                {formData.ingredients
-                                    .filter(ri => availableIngredients.find(i => i.id === ri.ingredientId)?.type === 'hop')
-                                    .map((ri, index) => (
-                                        <IngredientRow 
-                                            key={ri.ingredientId + index} 
-                                            ingredient={ri} 
-                                            index={formData.ingredients.indexOf(ri)} 
-                                            isEditing={effectiveIsEditing && canEditIngredients} 
-                                            availableIngredients={availableIngredients}
-                                            onIngredientChange={handleIngredientChange}
-                                            autoFocus={newIngredientIndex === formData.ingredients.indexOf(ri)}
-                                        />
-                                    ))}
-                                {(isEditing || isCreating) && canEditIngredients && (
-                                    <IngredientAdder 
-                                        availableIngredients={availableIngredients.filter(i => i.type === 'hop')}
-                                        onAdd={(id) => {
-                                            handleAddIngredient(id, 'hop');
-                                            setTimeout(() => {
-                                                setNewIngredientIndex(formData.ingredients.length);
-                                            }, 0);
-                                        }}
-                                    />
-                                )}
-                            </SectionContainer>
-
-                            {/* SECCIÓN OTROS / FERMENTACIÓN */}
-                            <SectionContainer title="Fermentación y Otros" icon={<Beer className="w-5 h-5"/>}>
-                                {/* Tiempos y Temperaturas de Fermentación */}
-                                <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-4 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="flex items-center">
-                                            <Clock className="w-4 h-4 mr-2 text-indigo-500 dark:text-indigo-400"/>
-                                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Días</label>
-                                            {(isEditing || isCreating) ? (
-                                                <input type="number" step="1" name="fermentationDays" value={formData.details.fermentationDays} onChange={handleDetailsChange}
-                                                    className="w-16 p-1 border border-gray-300 dark:border-gray-600 rounded ml-2 text-right text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-                                            ) : (
-                                                <p className="ml-2 font-bold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>
-                                                    {formData.details.fermentationDays > 0 ? `${formData.details.fermentationDays} días` : 'No definido'}
-                                                </p>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center">
-                                            <Thermometer className="w-4 h-4 mr-2 text-red-500 dark:text-red-400"/>
-                                            <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Temperatura</label>
-                                            {(isEditing || isCreating) ? (
-                                                <input type="number" step="1" name="fermentationTempC" value={formData.details.fermentationTempC} onChange={handleDetailsChange}
-                                                    className="w-16 p-1 border border-gray-300 dark:border-gray-600 rounded ml-2 text-right text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-                                            ) : (
-                                                <p className="ml-2 font-bold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>
-                                                    {formData.details.fermentationTempC > 0 ? `${formData.details.fermentationTempC} °C` : 'No definido'}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">Levaduras (en gramos) y Otros:</p>
-                                {formData.ingredients
-                                    .filter(ri => availableIngredients.find(i => i.id === ri.ingredientId)?.type === 'yeast' || availableIngredients.find(i => i.id === ri.ingredientId)?.type === 'other')
-                                    .map((ri, index) => (
-                                        <IngredientRow 
-                                            key={ri.ingredientId + index} 
-                                            ingredient={ri} 
-                                            index={formData.ingredients.indexOf(ri)} 
-                                            isEditing={effectiveIsEditing && canEditIngredients} 
-                                            availableIngredients={availableIngredients}
-                                            onIngredientChange={handleIngredientChange}
-                                            autoFocus={newIngredientIndex === formData.ingredients.indexOf(ri)}
-                                        />
-                                    ))}
-                                 {(isEditing || isCreating) && canEditIngredients && (
-                                    <IngredientAdder 
-                                        availableIngredients={availableIngredients.filter(i => i.type === 'yeast' || i.type === 'other')}
-                                        onAdd={(id, type) => {
-                                            handleAddIngredient(id, type);
-                                            setTimeout(() => {
-                                                setNewIngredientIndex(formData.ingredients.length);
-                                            }, 0);
-                                        }}
-                                    />
-                                )}
-                                
-                                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Notas y Observaciones Libres</label>
-                                    {(isEditing || isCreating) ? (
-                                        <textarea
-                                            name="notes"
-                                            value={formData.details.notes}
-                                            onChange={handleNotesChange}
-                                            rows={4}
-                                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500"
-                                        />
-                                    ) : (
-                                        <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg italic text-gray-600 dark:text-gray-400 select-none" style={{ cursor: 'default' }}>
-                                            {formData.details.notes || "No hay notas registradas para esta receta."}
-                                        </div>
-                                    )}
-                                </div>
-                            </SectionContainer>
-
-                        </div>
-                    </div>
+                {/* Contenido Principal de Receta */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <RecipeFormMainDetails
+                        isEditing={effectiveIsEditing}
+                        isCreating={isCreating}
+                        formData={formData}
+                        styles={styles}
+                        handleMainChange={handleMainChange}
+                        handleDetailsChange={handleDetailsChange}
+                        setIsScaling={setIsScaling}
+                        setNewBatchSize={setNewBatchSize}
+                        hasRelatedBrews={hasRelatedBrews}
+                        canEditIngredients={canEditIngredients}
+                    />
+                    <RecipeFormSections
+                        formData={formData}
+                        isEditing={effectiveIsEditing}
+                        isCreating={isCreating}
+                        canEditIngredients={canEditIngredients}
+                        availableIngredients={availableIngredients}
+                        handleDetailsChange={handleDetailsChange}
+                        handleIngredientChange={handleIngredientChange}
+                        handleAddIngredient={handleAddIngredient}
+                        newIngredientIndex={newIngredientIndex}
+                        setNewIngredientIndex={setNewIngredientIndex}
+                        handleNotesChange={handleNotesChange}
+                        handleRemoveIngredient={handleRemoveIngredient}
+                    />
                 </div>
 
-                {/* Modal de Escalar Receta (dentro del contexto del Modal principal) */}
+                {/* Modal de Escalar Receta */}
                 {isScaling && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-2xl max-w-sm w-full space-y-4">
-                            <h3 className="text-xl font-bold text-blue-600 dark:text-blue-400 flex items-center">
-                                <Maximize2 className="w-6 h-6 mr-2"/> Escalar Receta
-                            </h3>
-                            <p className="text-gray-700 dark:text-gray-300">El batch actual es de <span className="font-bold text-indigo-600 dark:text-indigo-400">{formData.batchLiters} L</span>.</p>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">Nuevo Tamaño de Batch (Litros)</label>
-                            <input
-                                type="number"
-                                step="1"
-                                value={newBatchSize ?? ''}
-                                onChange={e => setNewBatchSize(e.target.value === '' ? null : parseFloat(e.target.value))}
-                                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg text-right bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500"
-                            />
-                            <div className="flex justify-end space-x-3 pt-2">
-                                <button onClick={() => setIsScaling(false)} className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">
-                                    Cancelar
-                                </button>
-                                <button onClick={handleScale} className="px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition shadow-md">
-                                    <RotateCcw className="w-4 h-4 mr-2 inline"/> Escalar
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                    <ScaleRecipeModal
+                        isOpen={isScaling}
+                        batchLiters={formData.batchLiters}
+                        newBatchSize={newBatchSize}
+                        setNewBatchSize={setNewBatchSize}
+                        onCancel={() => setIsScaling(false)}
+                        onScale={handleScale}
+                    />
                 )}
 
                 {/* Modal de Confirmación de Eliminación */}
-                {deletingRecipe && (
-                    <ActionConfirmationModal
-                        title="Confirmar Eliminación"
-                        message={`¿Estás seguro de que quieres eliminar la receta ${deletingRecipe.name}? Esta acción no se puede deshacer.`}
-                        actionText="Eliminar Receta"
-                        onConfirm={confirmDelete}
-                        onCancel={() => setDeletingRecipe(null)}
-                        integrityError={deleteError}
-                    />
-                )}
+                <DeleteConfirmationModal
+                    deletingRecipe={deletingRecipe}
+                    confirmDelete={confirmDelete}
+                    setDeletingRecipe={setDeletingRecipe}
+                    deleteError={deleteError}
+                />
             </div>
         </div>
     );

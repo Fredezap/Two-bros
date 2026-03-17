@@ -47,7 +47,7 @@ export const HomePage: React.FC = () => {
     setShowRecipeModal(false)
     setShowModal(false)
   }
-  console.log("USER EN HOMEPAGE:", user);
+
   if (!user) {
     return (
       <div className="p-6 md:p-10 flex flex-col items-center justify-center min-h-[60vh]">

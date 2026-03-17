@@ -39,7 +39,6 @@ export function AuthProvider({ children }) {
 
   const login = async (data) => {
     const res = await authApi.login(data);
-    console.log('LOGIN RESPONSE FRONTEND:', res.data);
     setUser(res.data.user || null);
     setUserStore(res.data.user || null);
     return res;

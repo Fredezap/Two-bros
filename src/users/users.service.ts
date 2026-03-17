@@ -59,7 +59,6 @@ export class UsersService {
 
   // ...existing code...
   async login(dto: { email: string; password: string; deviceId: string; deviceName?: string; ip?: string; userAgent?: string, res?: any }) {
-    console.log("Login attempt:", { email: dto.email, deviceId: dto.deviceId, ip: dto.ip, userAgent: dto.userAgent });
     const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
     if (!user) throw new BadRequestException('Credenciales inválidas');
 
@@ -154,7 +153,6 @@ export class UsersService {
     // Preparar usuario seguro para frontend (sin passwordHash ni tokens)
     const { passwordHash, verificationToken, verificationTokenExpires, ...safeUser } = user;
     const response = { message: 'Login exitoso', user: safeUser, accessToken };
-    console.log('LOGIN RESPONSE:', JSON.stringify(response, null, 2));
     return response;
   }
 

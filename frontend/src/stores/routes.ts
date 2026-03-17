@@ -1,3 +1,10 @@
+// Rutas de API para entidades principales
+export const API_ROUTES = {
+  INGREDIENTS: '/api/ingredients',
+  RECIPES: '/api/recipes',
+  BREWS: '/api/brews',
+  STYLES: '/api/styles',
+};
 
 export const ROUTES = {
   HOME: '/',
@@ -32,7 +39,7 @@ export const PUBLIC_ROUTES = [
   ROUTES.LOGIN,
   ROUTES.REGISTER,
   ROUTES.FORGOT_PASSWORD,
-  ROUTES.RESET_PASSWORD.replace(':token', ''),
+  ROUTES.RESET_PASSWORD,
   ROUTES.VERIFY_EMAIL.replace(':token', ''),
   ROUTES.USERS_UNLOCK_ACCOUNT,
   ROUTES.USERS_FORGOT_PASSWORD

@@ -11,8 +11,6 @@ export default function ResetPasswordForm({ token }: { token: string }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  console.log('RESET PASSWORD TOKEN:', token);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirm) {
@@ -21,10 +19,8 @@ export default function ResetPasswordForm({ token }: { token: string }) {
     }
     try {
       const resp = await resetPassword({ token, newPassword: password });
-      console.log('RESET PASSWORD RESPONSE:', resp);
       toast.success('Contraseña restablecida correctamente. Ahora puedes iniciar sesión.');
     } catch (err) {
-      console.error('RESET PASSWORD ERROR:', err);
       const errors = err?.response?.data?.message;
       if (Array.isArray(errors)) {
         errors.forEach((msg) => toast.error(msg));

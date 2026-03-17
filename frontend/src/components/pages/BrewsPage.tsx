@@ -69,7 +69,6 @@ const BrewsPage: React.FC = () => {
 
   const handleCancelBrew = async (brewId: string) => {
     try {
-      // todo: cuando hayan ingredientes, ver que reponer stock este funcionando bien
       await brewsApi.cancel(brewId)
       toast.success('¡Cocción cancelada! El stock ha sido repuesto.')
       setConfirmAction(null)
@@ -290,7 +289,7 @@ const BrewsPage: React.FC = () => {
                 <td className="px-3 py-4 whitespace-nowrap text-sm text-center">
                   <BeerGlassIcon srm={b.colorSrm || 5} className="w-6 h-6 mx-auto" />
                 </td>
-                <td className="px-3 py-4 whitespace-nowrap text-sm text-center">{b.recipe?.style?.name || '-'}</td>
+                <td className="px-3 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100">{b.recipe?.style?.name || '-'}</td>
                 <td className="px-3 py-4 whitespace-nowrap text-sm font-bold text-gray-900 dark:text-gray-100 text-center">{b.recipe?.name || b.recipeName || '-'}</td>
                 <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center">{b.brewDate ? new Date(b.brewDate).toLocaleDateString() : '-'}</td>
                 <td className={`px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 text-center ${b.status === 'finished' ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700/50' : 'select-none'}`}

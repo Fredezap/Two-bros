@@ -30,9 +30,10 @@ export const BREW_STATUS = {
   FINISHED: 'finished',
   CANCELLED: 'cancelled',
 } as const;
-// Tipos básicos para el frontend - reflejan la estructura actual de initialData
-
-export type UnitOfMeasure = 'g' | 'l'
+// Unidades de medida (deben coincidir con el backend y la base de datos)
+export const UNIT_LITERS = 'l';
+export const UNIT_GRAMS = 'g';
+export type UnitOfMeasure = typeof UNIT_LITERS | typeof UNIT_GRAMS;
 export type IngredientType = 'malt' | 'hop' | 'yeast' | 'other'
 
 export interface Ingredient {

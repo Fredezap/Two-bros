@@ -25,51 +25,42 @@ import ResetPasswordRoute from './components/pages/ResetPasswordRoute';
 import VerifyEmailRoute from './components/pages/VerifyEmailRoute';
 
 const App: React.FC = () => {
-  console.log("finishing rebase")
   const { fetchAll } = useDataStore()
   const { darkMode } = useAppStore()
   const { user, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // todo: el fetch esta mandando el token? el fetchAll? porque me esta dando "reject" en todas las promesas
-
   useEffect(() => {
     if (!loading && !user) {
-      // Chequeo exacto de rutas públicas
+      // Permitir rutas públicas y rutas dinámicas como /verify-email/:token
       const isPublic = PUBLIC_ROUTES.some(route => {
-        // Si la ruta pública tiene ":", es dinámica, solo compara el inicio
         if (route.includes(':')) {
-          const match = location.pathname.startsWith(route.split(':')[0]);
-          return match;
+          // Permitir rutas como /verify-email/:token
+          const base = route.split(':')[0];
+          return location.pathname.startsWith(base);
         }
-        // Solo considerar '/' como home exacto
         if (route === '/') {
-          const match = location.pathname === '/';
-          return match;
+          return location.pathname === '/';
         }
-        // Si termina en "/", comparar exacto o con barra final
         if (route.endsWith('/')) {
-          const match = location.pathname === route;
-          return match;
+          return location.pathname === route;
         }
-        const match = location.pathname === route;
-        return match;
+        return location.pathname === route;
       });
       if (!isPublic) {
-        navigate(ROUTES.HOME, { replace: true });
+          navigate(ROUTES.HOME, { replace: true });
       }
     }
   }, [user, loading, location.pathname, navigate]);
 
-// todo: que las alertas muestren bien la cantidad de ingredientes que esten bajos
-// Todo: cambiar color letras en dark mode
-// Todo: el de quitar del stock no andaba, no llama al back y no mostraba un "estas seguro"?
-// Todo: lo de las unidades del ingrediente se debería poder cambiar
-// Todo: que sume el total de gramos lúpulo a y malta y levadura
+// todo: que se pueda filtrar por tipo de ingrediente ((solo maltas, lupulos, etc))
 // Todo: que calculé el ibu y el color solo, como asi la gravedad final e inicial. Por lo tanto esos ya no van a ser inputs, sino que los va a ir mostrando la app automaticamente a medida que se agregan ingredientes. supongo que hay que sumar más datos a ingrediente. Asi que antes de empezar con esto, averigua bien que datos enecesita una app para hacer estos calculos. Existen formulas? se puede obtener el ingrediente desde una API que ya exista?
 // Todo: comparativa de 2 recetas o más?
-// Todo: solucionar lo de los imputs de la receta
+// todo: agregar lo de 2FA y demas
+// todo: Login social (Google/Facebook)
+// todo: 2FA
+// todo: lo de los dispositivos e info de sesiones, con deslogueo y demas
 
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add('dark')
@@ -77,10 +68,8 @@ const App: React.FC = () => {
   }, [darkMode])
 
   useEffect(() => {
-    if(user){
-      fetchAll()
-    }
-  }, [fetchAll])
+    if (user) { fetchAll() }
+  }, [fetchAll, user])
 
   if (loading) return null;
 
