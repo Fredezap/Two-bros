@@ -109,6 +109,10 @@ export const IngredientAdder: React.FC<{ availableIngredients: any[]; onAdd: (id
 }
 
 export const IngredientForm: React.FC<{ ingredient?: any; onClose: () => void; onSave: (data: any) => void }> = ({ ingredient, onClose, onSave }) => {
+  const UNIT_OPTIONS = [
+    { value: 'g', label: 'Gramos (g)' },
+    { value: 'l', label: 'Litros (l)' },
+  ];
   const getUnit = (t: string) => (t === 'malt' || t === 'hop' || t === 'yeast') ? 'g' : 'l'
   const [name, setName] = useState(ingredient?.name || '')
   const [type, setType] = useState(ingredient?.type || 'malt')
@@ -123,7 +127,6 @@ export const IngredientForm: React.FC<{ ingredient?: any; onClose: () => void; o
       ? ingredient.reorderThreshold.toString()
       : ''
   )
-  const isInStock = ingredient?.isInStock || (ingredient && ingredient.stock > 0)
 
   // Sincronizar los valores cuando cambia ingredient
   React.useEffect(() => {
@@ -147,13 +150,19 @@ export const IngredientForm: React.FC<{ ingredient?: any; onClose: () => void; o
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     try {
+      const parsedStock = stock === '' ? 0 : parseFloat(stock);
+      if (parsedStock < 0) {
+        alert('El stock no puede ser negativo.');
+        return;
+      }
       onSave({
         id: ingredient?.id,
         name,
         type,
         unitOfMeasure,
-        stock: stock === '' ? 0 : parseFloat(stock),
-        reorderThreshold: reorderThreshold === '' ? 0 : parseFloat(reorderThreshold)
+        stock: parsedStock,
+        reorderThreshold: reorderThreshold === '' ? 0 : parseFloat(reorderThreshold),
+        isInStock: parsedStock > 0
       })
       // El cierre del modal lo maneja InventoryPage según éxito o error
     } catch (error: any) {
@@ -164,28 +173,55 @@ export const IngredientForm: React.FC<{ ingredient?: any; onClose: () => void; o
   return (
     <form onSubmit={handleSubmit} className="p-4 space-y-4 bg-white dark:bg-gray-800 mb-10 rounded-lg shadow-inner">
       <h2 className="text-2xl font-bold text-indigo-700 dark:text-indigo-400 border-b pb-2">{ingredient ? 'Editar un ingrediente' : 'Agregar un nuevo ingrediente'}</h2>
-      <input type="text" placeholder="Nombre (ej. Malta Pale Ale)" required value={name} onChange={e => setName(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
-      <div className="grid grid-cols-2 gap-4">
-        <select value={type} onChange={e => handleTypeChange(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-          {['malt', 'hop', 'yeast', 'other'].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
-        </select>
-        <div className="p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 flex items-center justify-between">Unidad: <span className="ml-1 font-bold">{unitOfMeasure.toUpperCase()}</span></div>
+      <div>
+        <label htmlFor="ingredient-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre</label>
+        <input id="ingredient-name" type="text" placeholder="Ej. Malta Pale Ale" required value={name} onChange={e => setName(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
       </div>
-      <input
-        type="number"
-        step="0.01"
-        placeholder={`Stock inicial (${unitOfMeasure.toUpperCase()})`}
-        value={stock}
-        onChange={e => setStock(e.target.value)}
-        className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-        disabled={!!ingredient && isInStock}
-      />
-      {ingredient && isInStock && (
-        <div className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
-          El stock solo se puede modificar desde la pestaña <b>Stock</b>.
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="ingredient-type" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Tipo</label>
+          <select id="ingredient-type" value={type} onChange={e => handleTypeChange(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            {['malt', 'hop', 'yeast', 'other'].map(t => <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>)}
+          </select>
         </div>
-      )}
-      <input type="number" step="0.01" placeholder={`Umbral de alerta (${unitOfMeasure.toUpperCase()})`} value={reorderThreshold} onChange={e => setReorderThreshold(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100" />
+        <div>
+          <label htmlFor="ingredient-unit" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Unidad</label>
+          <select id="ingredient-unit" value={unitOfMeasure} onChange={e => setUnitOfMeasure(e.target.value)} className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            {UNIT_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label htmlFor="ingredient-stock" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Stock inicial</label>
+        <input
+          id="ingredient-stock"
+          type="number"
+          step="0.01"
+          placeholder={`Stock inicial (${unitOfMeasure.toUpperCase()})`}
+          value={stock}
+          onChange={e => setStock(e.target.value)}
+          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+          disabled={ingredient && Number(ingredient.stock) > 0}
+        />
+        {ingredient && Number(ingredient.stock) > 0 && (
+          <div className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+            El stock solo se puede modificar desde la pestaña <b>Stock</b>.
+          </div>
+        )}
+      </div>
+
+      <div>
+        <label htmlFor="ingredient-threshold" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Umbral de alerta</label>
+        <input
+          id="ingredient-threshold"
+          type="number"
+          step="0.01"
+          placeholder={`Umbral de alerta (${unitOfMeasure.toUpperCase()})`}
+          value={reorderThreshold}
+          onChange={e => setReorderThreshold(e.target.value)}
+          className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+        />
+      </div>
       <div className="flex justify-end space-x-3 pt-2">
         <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">Cancelar</button>
         <button type="submit" className="px-4 py-2 text-sm font-semibold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition shadow-md">Guardar</button>

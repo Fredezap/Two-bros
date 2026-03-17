@@ -15,7 +15,6 @@ export default function UnlockAccount() {
         toast.success('¡Acceso recuperado! Ahora tienes 5 intentos para iniciar sesión.');
         navigate(ROUTES.LOGIN);
       } catch (err) {
-        console.log('UNLOCK ACCOUNT ERROR:', err);
         toast.error('No se pudo recuperar el acceso. El enlace puede haber expirado.');
         navigate(ROUTES.LOGIN);
       }

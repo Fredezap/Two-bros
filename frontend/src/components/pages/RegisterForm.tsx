@@ -63,7 +63,18 @@ export default function RegisterForm() {
       </div>
       {showSuccess && (
         <div className="mt-4 p-3 bg-green-100 text-green-800 rounded text-center">
-          Registro exitoso. Revisa tu correo para verificar tu cuenta.
+          Registro exitoso. Revisa tu correo para verificar tu cuenta.<br />
+          {(() => {
+            const domain = email.split('@')[1]?.toLowerCase();
+            let webmailUrl = '';
+            if (domain === 'gmail.com') webmailUrl = 'https://mail.google.com';
+            else if (domain === 'hotmail.com' || domain === 'outlook.com' || domain === 'live.com') webmailUrl = 'https://outlook.live.com';
+            else if (domain === 'yahoo.com') webmailUrl = 'https://mail.yahoo.com';
+            if (webmailUrl) {
+              return <a href={webmailUrl} target="_blank" rel="noopener noreferrer" className="block mt-2 text-blue-700 underline">Abrir mi correo</a>;
+            }
+            return null;
+          })()}
         </div>
       )}
     </div>

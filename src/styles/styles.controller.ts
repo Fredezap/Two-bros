@@ -36,7 +36,7 @@ export class StylesController {
       throw error;
     }
   }
-// todo: a futuro, cuando ya pueda agregar cocciones, fijarme que no me deje eliminar recetas que tengan cocciones
+  
   @Delete(':id')
   async remove(@Param('id', new ParseUUIDPipe()) id: string) {
     return await this.stylesService.softDelete(id);

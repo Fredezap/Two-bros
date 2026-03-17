@@ -25,7 +25,6 @@ export class EmailService {
 
     async sendAccountLockedEmail(to: string, token: string) {
       const url = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/unlock-account/${token}`;
-      console.log('[EMAIL] Enviando email de cuenta bloqueada a:', to);
       try {
         const info = await this.transporter.sendMail({
           from: process.env.SMTP_FROM || 'no-reply@two-bros-brew.com',
@@ -34,10 +33,7 @@ export class EmailService {
           html: `<p>Tu cuenta ha sido bloqueada por múltiples intentos fallidos de acceso.<br>Para desbloquearla puedes esperar 30 minutos o hacer clic en el siguiente botón para recuperar acceso inmediato:</p>
             <p><a href="${url}" style="display:inline-block;padding:8px 28px;background:#b7791f;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">Recuperar acceso a cuenta</a></p>`
         });
-        console.log('[EMAIL] Email de cuenta bloqueada enviado:', info.messageId || info);
-      } catch (err) {
-        console.error('[EMAIL] Error enviando email de cuenta bloqueada:', err);
-      }
+      } catch (err) {}
     }
 
     async sendResetPasswordEmail(to: string, token: string) {

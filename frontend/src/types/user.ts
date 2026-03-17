@@ -1,5 +1,12 @@
-// Este tipo refleja el payload JWT devuelto por /users/me
+// Este tipo refleja el modelo User completo del backend
 export interface User {
-  sub: string; // id
+  id: string;
   email: string;
+  isEmailVerified: boolean;
+  failedLoginAttempts: number;
+  lockUntil: string | null;
+  lastLoginAt: string | null;
+  lastLoginIp: string | null;
+  createdAt: string;
+  // Puedes agregar más campos si los necesitas
 }

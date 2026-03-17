@@ -35,7 +35,6 @@ export class UsersController {
 
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    console.log('RESET PASSWORD BODY:', dto);
     return this.usersService.resetPassword(dto.token, dto.newPassword);
   }
 

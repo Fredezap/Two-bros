@@ -22,7 +22,6 @@ export default function ForgotPasswordForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      console.log('Enviando solicitud de recuperación para email:', email);
       await api.post(ROUTES.USERS_FORGOT_PASSWORD, { email });
       toast.success('Si el email existe, recibirás instrucciones para recuperar tu contraseña.');
     } catch (err: any) {

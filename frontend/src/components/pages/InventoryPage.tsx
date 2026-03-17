@@ -1,16 +1,14 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { Beaker, DollarSign, ListOrdered, AlertTriangle, Plus, Trash2, Edit, Minimize2, Search, SortAsc, SortDesc } from 'lucide-react'
-import { ActionConfirmationModal, IngredientForm } from '../common/CommonModals'
-import * as logic from '../../services/logic'
+import { Beaker, DollarSign, ListOrdered, AlertTriangle, SortAsc, SortDesc } from 'lucide-react'
+import { ActionConfirmationModal } from '../common/CommonModals'
 import ApiSearchModal from './ApiSearchModal'
-import StockAlert from './StockAlert'
 import InventoryMasterTable from './InventoryMasterTable'
 import StockManagementTable from './StockManagementTable'
-import { ingredientService } from '../../services/logic'
 import { ingredientsApi } from '../../services/api/ingredients'
 import useDataStore from '../../stores/useDataStore'
 import useAppStore from '../../stores/useAppStore'
+import { getInStockIngredients, getLowStockIngredients, getActiveIngredients } from '../../utils/ingredientsUtils'
 import { toast } from 'react-toastify'
 
 const InventoryPage: React.FC = () => {
@@ -39,11 +37,11 @@ const InventoryPage: React.FC = () => {
   const [restockAmount, setRestockAmount] = useState('0')
   const [restockId, setRestockId] = useState<string | null>(null)
   const [removeStockId, setRemoveStockId] = useState<string | null>(null)
-  const activeIngredients = useMemo(() => ingredients.filter(i => i.deletedAt === null), [ingredients])
-
-  const lowStockAlert = useMemo(() => {
-    return activeIngredients?.filter(i => Number(i.stock) < Number(i.reorderThreshold ?? 0)) || [];
-  }, [activeIngredients]);
+  // Ingredientes activos (no eliminados) para inventario
+  const activeIngredients = useMemo(() => getActiveIngredients(ingredients), [ingredients])
+  // Ingredientes en stock (no eliminados y en stock) para la vista de stock
+  const inStockIngredients = useMemo(() => getInStockIngredients(ingredients), [ingredients])
+  const lowStockAlert = useMemo(() => getLowStockIngredients(ingredients), [ingredients])
 
   const sortedIngredients = useCallback((data: any[]) => {
     if (!sortConfig.key) return data
@@ -59,8 +57,9 @@ const InventoryPage: React.FC = () => {
     })
   }, [sortConfig])
 
+  // Stock: solo ingredientes en stock (no eliminados y isInStock true)
   const stockIngredients = useMemo(() => {
-    let filtered = sortedIngredients(activeIngredients)
+    let filtered = sortedIngredients(inStockIngredients)
     if (showOnlyLowStock) {
       filtered = filtered.filter(i => lowStockAlert.some(a => a.id === i.id))
     }
@@ -76,9 +75,10 @@ const InventoryPage: React.FC = () => {
       })
     }
     return filtered
-  }, [activeIngredients, sortConfig, sortedIngredients, searchTerm, showOnlyLowStock, lowStockAlert])
+  }, [inStockIngredients, sortConfig, sortedIngredients, searchTerm, showOnlyLowStock, lowStockAlert])
 
- const inventoryIngredients = useMemo(() => {
+  // Inventario: todos los ingredientes no eliminados
+  const inventoryIngredients = useMemo(() => {
     const filtered = sortedIngredients(activeIngredients)
     if (!searchTerm) return filtered
     return filtered.filter(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()))
@@ -184,6 +184,16 @@ const InventoryPage: React.FC = () => {
   const requestSort = (key: string) => { let direction = 'asc'; if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc'; setSortConfig({ key, direction }) }
   const getSortIcon = (key: string) => { if (sortConfig.key !== key) return null; return sortConfig.direction === 'asc' ? <SortAsc className="w-4 h-4 ml-1" /> : <SortDesc className="w-4 h-4 ml-1" /> }
 
+  const onRemoveFromStock = (id: string) => {
+    const ing = ingredients.find(i => i.id === id)
+    setRemoveFromStockId(id);
+    if (ing && ing.stock > 0) {
+      setRemoveFromStockWarning('Este ingrediente aún tiene stock. Si lo quitas, el stock se pondrá en 0 y el ingrediente ya no aparecerá en la vista de stock (solo en inventario). ¿Deseas continuar?');
+    } else {
+      setRemoveFromStockWarning('¿Estás seguro que deseas quitar este ingrediente del stock? Esta acción pondrá el stock en 0 y solo lo ocultará de la vista de stock, pero seguirá disponible en el inventario.');
+    }
+  }
+
   return (
     <div className="p-6 md:p-10">
       <div className="mb-4 flex items-center gap-4">
@@ -232,26 +242,36 @@ const InventoryPage: React.FC = () => {
         <InventoryMasterTable isFormOpen={isFormOpen} editingIngredient={editingIngredient} handleSaveIngredient={handleSaveIngredient} handleCloseForm={handleCloseForm} inventoryIngredients={inventoryIngredients} requestSort={requestSort} getSortIcon={getSortIcon} handleEdit={handleEdit} handleSoftDelete={handleSoftDelete} setIsApiSearchOpen={setIsApiSearchOpen} setIsFormOpen={() => { setEditingIngredient(undefined); setIsFormOpen(true) }} />
       ) : (
         <>
-          <StockManagementTable setRestockId={setRestockId} restockId={restockId} stockIngredients={stockIngredients} lowStockAlert={lowStockAlert} requestSort={requestSort} getSortIcon={getSortIcon} handleQuickRestock={handleQuickRestock} handleRestockCustom={handleRestockCustom} setRestockAmount={setRestockAmount} restockAmount={restockAmount} removeStockId={removeStockId} setRemoveStockId={setRemoveStockId} handleRemoveStockCustom={handleRemoveStockCustom} activeIngredients={activeIngredients} onRemoveFromStock={id => {
-            const ing = ingredients.find(i => i.id === id)
-            if (ing && ing.stock > 0) {
-              setRemoveFromStockWarning('No puedes quitar este ingrediente de stock mientras tenga stock disponible.')
-              setRemoveFromStockId(id)
-            } else {
-              // Marcar como oculto en stock
-              const newIngredients = ingredients.map(i => i.id === id ? { ...i, hiddenFromStock: true } : i)
-              setIngredients(newIngredients)
-            }
-          }} />
-          {removeFromStockWarning ? (
+          <StockManagementTable 
+            setRestockId={setRestockId} restockId={restockId} stockIngredients={stockIngredients} lowStockAlert={lowStockAlert} 
+            requestSort={requestSort} getSortIcon={getSortIcon} handleQuickRestock={handleQuickRestock} handleRestockCustom={handleRestockCustom} 
+            setRestockAmount={setRestockAmount} restockAmount={restockAmount} removeStockId={removeStockId} setRemoveStockId={setRemoveStockId} 
+            handleRemoveStockCustom={handleRemoveStockCustom} activeIngredients={activeIngredients}
+            onRemoveFromStock={onRemoveFromStock}
+          />
+          {removeFromStockId && (
             <ActionConfirmationModal
-              title="No se puede quitar"
-              message={removeFromStockWarning}
-              actionText="Aceptar"
-              onConfirm={() => { setRemoveFromStockWarning(null); setRemoveFromStockId(null) }}
-              onCancel={() => { setRemoveFromStockWarning(null); setRemoveFromStockId(null) }}
+              title="Confirmar quitar de stock"
+              message={removeFromStockWarning || ''}
+              actionText="Quitar de stock"
+              onConfirm={async () => {
+                const id = removeFromStockId;
+                try {
+                  // Buscar el ingrediente para obtener el stock actual
+                  const ing = ingredients.find(i => i.id === id);
+                  const a = await ingredientsApi.update(id, { isInStock: false as boolean, stock: 0 });
+                  const all = await ingredientsApi.getAll();
+                  setIngredients(all);
+                  toast.info('El ingrediente fue quitado del stock y su stock fue puesto en 0. Ahora solo aparecerá en el inventario.');
+                } catch (e) {
+                  toast.error('Error al actualizar el ingrediente en el backend.');
+                }
+                setRemoveFromStockId(null);
+                setRemoveFromStockWarning(null);
+              }}
+              onCancel={() => { setRemoveFromStockId(null); setRemoveFromStockWarning(null); }}
             />
-          ) : null}
+          )}
         </>
       )}
 

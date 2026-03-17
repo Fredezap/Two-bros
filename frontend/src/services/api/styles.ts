@@ -1,15 +1,16 @@
 import api from '../../api/axios'
 import type { Style } from '../../types'
+import { API_ROUTES } from '../../stores/routes'
 
 export const stylesApi = {
   async getAll(): Promise<Style[]> {
-    const res = await api.get('/api/styles')
+    const res = await api.get(API_ROUTES.STYLES)
     return res.data
   },
 
   async create(payload: Partial<Style>): Promise<Style> {
     try {
-      const res = await api.post('/api/styles', payload);
+      const res = await api.post(API_ROUTES.STYLES, payload);
       return res.data;
     } catch (error: any) {
       // Si el backend envía un mensaje, propágalo
@@ -23,7 +24,7 @@ export const stylesApi = {
 
   async update(id: string, payload: Partial<Style>): Promise<Style> {
     try {
-      const res = await api.put(`/api/styles/${id}`, payload);
+      const res = await api.put(`${API_ROUTES.STYLES}/${id}`, payload);
       return res.data;
     } catch (error: any) {
       throw error;
@@ -31,7 +32,7 @@ export const stylesApi = {
   },
   
   async remove(id: string): Promise<void> {
-    await api.delete(`/api/styles/${id}`)
+    await api.delete(`${API_ROUTES.STYLES}/${id}`)
   }
 }
 

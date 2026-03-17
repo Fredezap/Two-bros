@@ -1,4 +1,5 @@
 import axios from '../../api/axios';
+import ROUTES from '../../stores/routes';
 import type {
 	LoginData,
 	RegisterData,
@@ -7,7 +8,16 @@ import type {
 	VerifyEmailData,
 } from '../../types';
 
-import ROUTES from '../../stores/routes';
+// Refresca el access token usando el refresh token de cookies
+export const refreshAccessToken = async () => {
+	// Siempre intentar refrescar, el backend validará la cookie httpOnly
+	try {
+		const res = await axios.post(ROUTES.USERS + '/refresh');
+		return res.data;
+	} catch (e) {
+		throw new Error('No se pudo refrescar el access token');
+	}
+};
 
 export const register = (data: RegisterData) => axios.post(ROUTES.USERS_REGISTER, data);
 export const login = (data: LoginData) => axios.post(ROUTES.USERS_LOGIN, data);
@@ -24,8 +34,3 @@ export const getProfile = () => {
 	return Promise.reject(new Error('No hay sesión activa'));
 };
 export const logout = () => axios.post(ROUTES.USERS_LOGOUT);
-
-
-// todo: Login social (Google/Facebook)
-// todo: 2FA
-// todo: Migrar token a cookies httpOnly para máxima seguridad
