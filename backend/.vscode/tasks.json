@@ -1,0 +1,11 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Test EmailController",
+			"type": "shell",
+			"command": "npx jest src/controllers/email.controller.spec.ts",
+			"group": "test"
+		}
+	]
+}
