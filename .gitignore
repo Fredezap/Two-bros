@@ -1,6 +1,11 @@
 # Ignorar carpetas del frontend
 frontend/dist/
 frontend/node_modules/
+
+# Ignorar carpetas del backend
+backend/dist/
+backend/node_modules/
+
 # compiled output
 /dist
 /node_modules
