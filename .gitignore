@@ -38,6 +38,11 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# Ignorar archivos de entorno
+.env
+*.env
+!.env.example
+
 # dotenv environment variable files
 **/.env*
 
