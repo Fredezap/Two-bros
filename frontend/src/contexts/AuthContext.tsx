@@ -38,9 +38,12 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (data) => {
+    console.log('[AuthContext] Intentando login con:', data);
     const res = await authApi.login(data);
+    console.log('[AuthContext] Respuesta de login:', res);
     setUser(res.data.user || null);
     setUserStore(res.data.user || null);
+    console.log('[AuthContext] Usuario seteado en contexto y store:', res.data.user);
     return res;
   };
 

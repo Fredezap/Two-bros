@@ -12,6 +12,7 @@ export class PrismaService
 
   async onModuleInit() {
     await this.$connect();
+    console.log('Prisma conectado a la base de datos');
   }
 
   async onModuleDestroy() {

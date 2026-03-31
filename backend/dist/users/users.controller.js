@@ -52,6 +52,36 @@ let UsersController = class UsersController {
         await this.prisma.refreshToken.delete({ where: { id: tokenRecord.id } });
         return { message: 'Email verificado correctamente.' };
     }
+    async sendUnlockEmail(dto) {
+        console.log('POST /users/send-unlock-email recibido. Email:', dto.email);
+        const user = await this.prisma.user.findUnique({ where: { email: dto.email.trim().toLowerCase() } });
+        console.log('Usuario encontrado:', user ? user.email : null);
+        if (!user) {
+            console.log('No se encontró el usuario');
+            return { success: false, message: 'Usuario no encontrado.' };
+        }
+        if (!user.lockUntil || user.lockUntil < new Date()) {
+            console.log('La cuenta no está bloqueada actualmente. No es necesario desbloquear. lockUntil:', user.lockUntil, 'now:', new Date());
+            return { success: false, message: 'La cuenta ya no está bloqueada. Intenta iniciar sesión normalmente.' };
+        }
+        const unlockToken = require('uuid').v4();
+        const unlockTokenExpires = new Date(Date.now() + 30 * 60 * 1000);
+        console.log('Token generado/enviado:', unlockToken, 'Expira:', unlockTokenExpires);
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: { verificationToken: unlockToken, verificationTokenExpires: unlockTokenExpires },
+        });
+        console.log('Antes de enviar email de desbloqueo...');
+        try {
+            await this.usersService['emailService'].sendAccountLockedEmail(user.email, unlockToken);
+            console.log('Email de desbloqueo enviado a:', user.email);
+        }
+        catch (err) {
+            console.error('Error enviando email de desbloqueo:', err);
+            return { success: false, message: 'Error enviando email de desbloqueo.' };
+        }
+        return { success: true, message: 'Correo de desbloqueo reenviado.' };
+    }
     async resetPasswordToken(dto) {
         const tokenRecord = await this.prisma.refreshToken.findFirst({
             where: {
@@ -74,7 +104,10 @@ let UsersController = class UsersController {
         return { message: 'Contraseña restablecida correctamente.' };
     }
     async register(dto) {
-        return this.usersService.register(dto);
+        const res = await this.usersService.register(dto);
+        const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+        console.log('[REGISTER] Usuario creado:', user === null || user === void 0 ? void 0 : user.email, 'isEmailVerified:', user === null || user === void 0 ? void 0 : user.isEmailVerified);
+        return res;
     }
     async verifyEmail(dto) {
         return this.usersService.verifyEmail(dto.token);
@@ -86,6 +119,7 @@ let UsersController = class UsersController {
         return this.usersService.resetPassword(dto.token, dto.newPassword);
     }
     async login(dto, req, res) {
+        console.log('[LOGIN] Intento de login:', dto.email);
         let ip = req.ip;
         const xff = req.headers['x-forwarded-for'];
         if (Array.isArray(xff))
@@ -98,8 +132,30 @@ let UsersController = class UsersController {
             userAgent = ua[0];
         else if (typeof ua === 'string')
             userAgent = ua;
-        const result = await this.usersService.login(Object.assign(Object.assign({}, dto), { ip, userAgent, res }));
-        return res.json(result);
+        try {
+            const result = await this.usersService.login(Object.assign(Object.assign({}, dto), { ip, userAgent, res }));
+            console.log('[LOGIN] Login exitoso para:', dto.email);
+            return res.json(result);
+        }
+        catch (err) {
+            let errorMsg = '';
+            if (err && typeof err === 'object') {
+                if ('response' in err && err.response && 'data' in err.response) {
+                    errorMsg = JSON.stringify(err.response.data);
+                }
+                else if ('message' in err) {
+                    errorMsg = err.message;
+                }
+                else {
+                    errorMsg = JSON.stringify(err);
+                }
+            }
+            else {
+                errorMsg = String(err);
+            }
+            console.error('[LOGIN] Error login para:', dto.email, '\n', errorMsg);
+            throw err;
+        }
     }
     async changePassword(req, dto) {
         if (!req.user)
@@ -107,7 +163,27 @@ let UsersController = class UsersController {
         return this.usersService.changePassword(req.user.sub, dto.newPassword);
     }
     async resendVerification(dto) {
-        return this.usersService.forgotPassword(dto.email);
+        console.log('POST /users/resend-verification recibido. Email:', dto.email);
+        const user = await this.prisma.user.findUnique({ where: { email: dto.email.trim().toLowerCase() } });
+        console.log('Usuario encontrado:', user ? user.email : null, 'isEmailVerified:', user ? user.isEmailVerified : null);
+        if (!user) {
+            console.log('No se encontró el usuario');
+            return { success: false, message: 'Usuario no encontrado.' };
+        }
+        if (user.isEmailVerified) {
+            console.log('El email ya está verificado');
+            return { success: false, message: 'El email ya está verificado.' };
+        }
+        const verificationToken = user.verificationToken || require('uuid').v4();
+        const verificationTokenExpires = user.verificationTokenExpires || new Date(Date.now() + 1000 * 60 * 60 * 24);
+        console.log('Token generado/enviado:', verificationToken, 'Expira:', verificationTokenExpires);
+        await this.prisma.user.update({
+            where: { id: user.id },
+            data: { verificationToken, verificationTokenExpires },
+        });
+        await this.usersService['emailService'].sendVerificationEmail(user.email, verificationToken);
+        console.log('Email de verificación enviado a:', user.email);
+        return { success: true, message: 'Correo de verificación reenviado.' };
     }
     async me(req) {
         if (!req.user)
@@ -117,10 +193,28 @@ let UsersController = class UsersController {
     async refresh(req, res) {
         var _a;
         const refreshToken = (_a = req.cookies) === null || _a === void 0 ? void 0 : _a.refresh_token;
-        if (!refreshToken)
+        console.log('[BACK] /users/refresh - refresh_token recibido:', refreshToken);
+        if (!refreshToken) {
+            console.warn('[BACK] /users/refresh - No refresh token en cookies');
             return res.status(401).json({ message: 'No refresh token' });
-        const result = await this.usersService.refreshAccessToken(refreshToken, req, res);
-        return res.json(result);
+        }
+        try {
+            const result = await this.usersService.refreshAccessToken(refreshToken, req, res);
+            const isProd = process.env.NODE_ENV === 'production';
+            res.cookie('access_token', result.accessToken, {
+                httpOnly: true,
+                secure: isProd ? true : false,
+                sameSite: isProd ? 'strict' : 'lax',
+                maxAge: 15 * 60 * 1000,
+                path: '/',
+            });
+            return res.json(result);
+        }
+        catch (err) {
+            console.error('[BACK] /users/refresh - Error:', err);
+            const errorMsg = typeof err === 'object' && err !== null && 'message' in err ? err.message : String(err);
+            return res.status(401).json({ message: 'Refresh token inválido o expirado', error: errorMsg });
+        }
     }
     async logout(req, res) {
         var _a;
@@ -141,6 +235,13 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], UsersController.prototype, "verifyEmailToken", null);
+__decorate([
+    (0, common_1.Post)('send-unlock-email'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], UsersController.prototype, "sendUnlockEmail", null);
 __decorate([
     (0, common_1.Post)('reset-password-token'),
     __param(0, (0, common_1.Body)()),

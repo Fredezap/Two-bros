@@ -36,6 +36,7 @@ export declare class UsersService {
         accessToken: string;
     }>;
     forgotPassword(email: string): Promise<{
+        success: boolean;
         message: string;
     }>;
     resetPassword(token: string, newPassword: string): Promise<{

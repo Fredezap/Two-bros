@@ -23,6 +23,12 @@ export declare class UsersController {
     }): Promise<{
         message: string;
     }>;
+    sendUnlockEmail(dto: {
+        email: string;
+    }): Promise<{
+        success: boolean;
+        message: string;
+    }>;
     resetPasswordToken(dto: {
         token: string;
         newPassword: string;
@@ -36,6 +42,7 @@ export declare class UsersController {
         message: string;
     }>;
     forgotPassword(dto: ForgotPasswordDto): Promise<{
+        success: boolean;
         message: string;
     }>;
     resetPassword(dto: ResetPasswordDto): Promise<{
@@ -48,6 +55,7 @@ export declare class UsersController {
         message: string;
     }>;
     resendVerification(dto: ForgotPasswordDto): Promise<{
+        success: boolean;
         message: string;
     }>;
     me(req: RequestWithUser): Promise<JwtPayload>;

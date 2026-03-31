@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { EyeIcon, EyeOffIcon } from '../common/EyeIcons';
 import { useResetPassword } from '../../hooks/useAuthActions';
 import { toast } from 'react-toastify';
@@ -10,6 +11,7 @@ export default function ResetPasswordForm({ token }: { token: string }) {
   const resetPassword = useResetPassword();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,6 +22,9 @@ export default function ResetPasswordForm({ token }: { token: string }) {
     try {
       const resp = await resetPassword({ token, newPassword: password });
       toast.success('Contraseña restablecida correctamente. Ahora puedes iniciar sesión.');
+      setTimeout(() => {
+        navigate('/login');
+      }, 1200);
     } catch (err) {
       const errors = err?.response?.data?.message;
       if (Array.isArray(errors)) {

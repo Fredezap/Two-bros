@@ -24,7 +24,7 @@ exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma.service");
 const bcrypt = require("bcryptjs");
-const v4_1 = require("uuid/v4");
+const uuid_1 = require("uuid");
 const email_service_1 = require("./email.service");
 const jwt_service_1 = require("./jwt.service");
 let UsersService = class UsersService {
@@ -38,7 +38,7 @@ let UsersService = class UsersService {
         if (existing)
             throw new common_1.BadRequestException('El email ya está registrado');
         const passwordHash = await bcrypt.hash(dto.password, 12);
-        const verificationToken = (0, v4_1.default)();
+        const verificationToken = (0, uuid_1.v4)();
         const user = await this.prisma.user.create({
             data: {
                 email: dto.email,
@@ -55,12 +55,22 @@ let UsersService = class UsersService {
         const user = await this.prisma.user.findFirst({
             where: {
                 verificationToken: token,
-                verificationTokenExpires: { gt: new Date() },
-                isEmailVerified: false,
             },
         });
+        console.log('[VERIFY EMAIL] Token recibido:', token);
+        console.log('[VERIFY EMAIL] Usuario encontrado:', user === null || user === void 0 ? void 0 : user.email, 'isEmailVerified:', user === null || user === void 0 ? void 0 : user.isEmailVerified, 'verificationTokenExpires:', user === null || user === void 0 ? void 0 : user.verificationTokenExpires);
         if (!user)
             throw new common_1.BadRequestException('Token inválido o expirado');
+        if (user.isEmailVerified) {
+            return { message: 'El email ya está verificado.' };
+        }
+        if (!user.verificationTokenExpires || user.verificationTokenExpires < new Date()) {
+            if (user.isEmailVerified) {
+                return { message: 'El email ya está verificado.' };
+            }
+            console.log('[VERIFY EMAIL] Token expirado. Fecha expiración:', user.verificationTokenExpires, 'Ahora:', new Date());
+            throw new common_1.BadRequestException('Token inválido o expirado');
+        }
         await this.prisma.user.update({
             where: { id: user.id },
             data: {
@@ -69,29 +79,48 @@ let UsersService = class UsersService {
                 verificationTokenExpires: null,
             },
         });
+        console.log('[VERIFY EMAIL] Email verificado correctamente para:', user.email);
         return { message: 'Email verificado correctamente.' };
     }
     async login(dto) {
-        const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
-        if (!user)
-            throw new common_1.BadRequestException('Credenciales inválidas');
+        const normalizedEmail = dto.email.trim().toLowerCase();
+        const user = await this.prisma.user.findUnique({ where: { email: normalizedEmail } });
+        if (!user) {
+            throw new common_1.BadRequestException({ message: 'Usuario no encontrado.', code: 'USER_NOT_FOUND' });
+        }
+        if (!user.isEmailVerified) {
+            throw new common_1.BadRequestException({ message: 'Debes verificar tu email antes de iniciar sesión.', code: 'EMAIL_NOT_VERIFIED' });
+        }
         if (user.lockUntil && user.lockUntil > new Date()) {
-            throw new common_1.BadRequestException('Cuenta bloqueada. Revisa tu email para recuperarla o espera a que se desbloquee.');
+            const unlockDate = new Date(user.lockUntil);
+            const now = new Date();
+            console.log('Cuenta bloqueada hasta:', unlockDate);
+            console.log('Hora actual:', now);
+            if (unlockDate > now) {
+                const unlockTime = unlockDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                throw new common_1.BadRequestException({
+                    message: `Tu cuenta está bloqueada por 30 minutos. Puedes esperar hasta ${unlockTime} o usar el enlace de recuperación enviado a tu email.`,
+                    code: 'ACCOUNT_LOCKED',
+                    unlockAt: user.lockUntil
+                });
+            }
+            await this.prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockUntil: null } });
         }
         const valid = await bcrypt.compare(dto.password, user.passwordHash);
         if (!valid) {
-            const failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+            const prevFailed = user.failedLoginAttempts || 0;
+            const failedLoginAttempts = prevFailed + 1;
             let lockUntil = user.lockUntil;
             let sendLockEmail = false;
-            let remainingAttempts = 5 - failedLoginAttempts;
             let unlockToken = user.verificationToken;
             let unlockTokenExpires = user.verificationTokenExpires;
+            let remainingAttempts = 5 - failedLoginAttempts;
             if (failedLoginAttempts >= 5) {
                 lockUntil = new Date(Date.now() + 30 * 60 * 1000);
                 sendLockEmail = true;
-                remainingAttempts = 0;
-                unlockToken = (0, v4_1.default)();
+                unlockToken = (0, uuid_1.v4)();
                 unlockTokenExpires = new Date(Date.now() + 30 * 60 * 1000);
+                remainingAttempts = 0;
             }
             await this.prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts, lockUntil, verificationToken: unlockToken, verificationTokenExpires: unlockTokenExpires } });
             await this.prisma.loginAttempt.create({
@@ -99,11 +128,21 @@ let UsersService = class UsersService {
             });
             if (sendLockEmail && unlockToken)
                 await this.emailService.sendAccountLockedEmail(user.email, unlockToken);
-            throw new common_1.BadRequestException({
-                message: 'Credenciales inválidas',
-                remainingAttempts,
-                locked: sendLockEmail
-            });
+            if (failedLoginAttempts >= 5) {
+                const unlockTime = lockUntil ? lockUntil.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '';
+                throw new common_1.BadRequestException({
+                    message: `Por razones de seguridad, después de varios intentos fallidos tu cuenta se bloqueó por 30 minutos. Puedes esperar hasta ${unlockTime} o usar el enlace de recuperación enviado a tu email.`,
+                    code: 'ACCOUNT_LOCKED',
+                    unlockAt: lockUntil
+                });
+            }
+            else {
+                throw new common_1.BadRequestException({
+                    message: 'Contraseña incorrecta',
+                    remainingAttempts,
+                    locked: false
+                });
+            }
         }
         if (user.lockUntil && user.lockUntil < new Date()) {
             await this.prisma.user.update({ where: { id: user.id }, data: { failedLoginAttempts: 0, lockUntil: null } });
@@ -155,17 +194,31 @@ let UsersService = class UsersService {
         return response;
     }
     async forgotPassword(email) {
-        const user = await this.prisma.user.findUnique({ where: { email } });
-        if (!user)
-            return { message: 'Si el email existe, se enviará un enlace para restablecer la contraseña.' };
-        const resetToken = (0, v4_1.default)();
+        console.log('[forgotPassword] Solicitud recibida para:', email);
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await this.prisma.user.findFirst({
+            where: { email: normalizedEmail },
+        });
+        console.log("usuario encontrado:", user);
+        if (!user) {
+            console.log('[forgotPassword] Usuario NO encontrado:', normalizedEmail);
+            return { success: false, message: 'Usuario no encontrado.' };
+        }
+        console.log('[forgotPassword] Usuario encontrado, enviando email:', user.email);
+        const resetToken = (0, uuid_1.v4)();
         const resetTokenExpires = new Date(Date.now() + 1000 * 60 * 60);
         await this.prisma.user.update({
             where: { id: user.id },
             data: { verificationToken: resetToken, verificationTokenExpires: resetTokenExpires },
         });
-        await this.emailService.sendResetPasswordEmail(user.email, resetToken);
-        return { message: 'Si el email existe, se enviará un enlace para restablecer la contraseña.' };
+        try {
+            await this.emailService.sendResetPasswordEmail(user.email, resetToken);
+            return { success: true, message: 'Si el email existe, se enviará un enlace para restablecer la contraseña.' };
+        }
+        catch (error) {
+            console.error('Error enviando email de recuperación de contraseña:', error);
+            return { success: false, message: 'No se pudo enviar el email de recuperación de contraseña.' };
+        }
     }
     async resetPassword(token, newPassword) {
         const user = await this.prisma.user.findFirst({
@@ -198,6 +251,7 @@ let UsersService = class UsersService {
         return { message: 'Contraseña cambiada correctamente.' };
     }
     async refreshAccessToken(refreshToken, req, res) {
+        console.log('[BACK] refreshAccessToken - token recibido:', refreshToken);
         const dbTokens = await this.prisma.refreshToken.findMany({
             where: { revokedAt: null },
             orderBy: { createdAt: 'desc' },
@@ -209,18 +263,24 @@ let UsersService = class UsersService {
                 break;
             }
         }
-        if (!found)
+        if (!found) {
+            console.warn('[BACK] refreshAccessToken - Token no encontrado en DB');
             throw new common_1.BadRequestException('Refresh token inválido');
-        if (found.expiresAt < new Date())
+        }
+        if (found.expiresAt < new Date()) {
+            console.warn('[BACK] refreshAccessToken - Token expirado en DB:', found.expiresAt, 'ahora:', new Date());
             throw new common_1.BadRequestException('Refresh token expirado');
+        }
         let payload;
         try {
             payload = this.jwtService.verify(refreshToken);
         }
-        catch (_a) {
+        catch (e) {
+            console.warn('[BACK] refreshAccessToken - JWT inválido:', e);
             throw new common_1.BadRequestException('Refresh token inválido');
         }
         const accessToken = this.jwtService.sign({ sub: payload.sub, email: payload.email }, '15m');
+        console.log('[BACK] refreshAccessToken - Nuevo access_token emitido para:', payload.email);
         return { accessToken };
     }
     async logout(refreshToken) {
