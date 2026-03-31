@@ -50,16 +50,19 @@ api.interceptors.response.use(
         isRefreshing = true;
         try {
           console.log('[AXIOS] Llamando refreshAccessToken()');
-          await refreshAccessToken();
-          console.log('[AXIOS] Refresh exitoso, reintentando request original');
+          // DEBUG: Mostrar cookies antes de llamar al backend
+          console.log('[AXIOS] Cookies antes de refresh:', document.cookie);
+          const refreshResult = await refreshAccessToken();
+          console.log('[AXIOS] Refresh exitoso, reintentando request original', refreshResult);
           processQueue(null);
           return api(originalRequest);
         } catch (refreshError) {
           console.error('[AXIOS] Error al refrescar token:', refreshError);
-          processQueue(refreshError, null);
-          await logout();
-          clearUserStorage();
+          // processQueue(refreshError, null);
+          // await logout();
+          // clearUserStorage();
           if (window.location.pathname !== '/login') {
+            console.warn('[AXIOS] Redirigiendo a /login');
             window.location.href = '/login';
           }
           return Promise.reject(refreshError);

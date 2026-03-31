@@ -23,6 +23,7 @@ import { useAuth } from './contexts/AuthContext'
 import { useLocation, useNavigate } from 'react-router-dom'
 import ResetPasswordRoute from './components/pages/ResetPasswordRoute';
 import VerifyEmailRoute from './components/pages/VerifyEmailRoute';
+import UnlockAccountRequest from './components/pages/UnlockAccountRequest';
 
 const App: React.FC = () => {
   const { fetchAll } = useDataStore()
@@ -36,7 +37,6 @@ const App: React.FC = () => {
       // Permitir rutas públicas y rutas dinámicas como /verify-email/:token
       const isPublic = PUBLIC_ROUTES.some(route => {
         if (route.includes(':')) {
-          // Permitir rutas como /verify-email/:token
           const base = route.split(':')[0];
           return location.pathname.startsWith(base);
         }
@@ -49,8 +49,11 @@ const App: React.FC = () => {
         return location.pathname === route;
       });
       if (!isPublic) {
-          navigate(ROUTES.HOME, { replace: true });
+        console.warn('[App] Usuario no autenticado, redirigiendo a HOME desde', location.pathname);
+        navigate(ROUTES.HOME, { replace: true });
       }
+    } else {
+      console.log('[App] Usuario autenticado o loading:', { user, loading, pathname: location.pathname });
     }
   }, [user, loading, location.pathname, navigate]);
 
@@ -91,6 +94,7 @@ const App: React.FC = () => {
           <Route path={ROUTES.RESET_PASSWORD} element={<ResetPasswordRoute />} />
           <Route path={ROUTES.VERIFY_EMAIL} element={<VerifyEmailRoute />} />
           <Route path="/unlock-account/:token" element={<UnlockAccount />} />
+            <Route path={ROUTES.UNLOCK_ACCOUNT_REQUEST} element={<UnlockAccountRequest />} />
           <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
         </Routes>
       </main>

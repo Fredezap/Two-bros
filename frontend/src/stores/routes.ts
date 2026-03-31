@@ -32,6 +32,7 @@ export const ROUTES = {
   USERS_ME: '/users/me',
   USERS_LOGOUT: '/users/logout',
   USERS_UNLOCK_ACCOUNT: '/users/unlock-account',
+  UNLOCK_ACCOUNT_REQUEST: '/unlock-account-request',
 } as const
 
 export const PUBLIC_ROUTES = [

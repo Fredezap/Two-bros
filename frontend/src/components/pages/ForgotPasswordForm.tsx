@@ -21,10 +21,17 @@ export default function ForgotPasswordForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log('[ForgotPassword] Enviando solicitud para:', email);
     try {
-      await api.post(ROUTES.USERS_FORGOT_PASSWORD, { email });
+      const res = await api.post(ROUTES.USERS_FORGOT_PASSWORD, { email });
+      if (res?.data?.success === false) {
+        toast.error(res.data.message || 'Error al solicitar recuperación');
+        return;
+      }
+      console.log('[ForgotPassword] Respuesta backend:', res?.data);
       toast.success('Si el email existe, recibirás instrucciones para recuperar tu contraseña.');
     } catch (err: any) {
+      console.error('[ForgotPassword] Error:', err);
       toast.error(err?.response?.data?.message || 'Error al solicitar recuperación');
     } finally {
       setLoading(false);
