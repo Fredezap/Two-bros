@@ -32,6 +32,7 @@ export declare class RecipesController {
             name: string;
             description: string | null;
             deletedAt: Date | null;
+            userId: string;
         }, unknown, never> & {}) | null;
         ingredients: (import("@prisma/client/runtime").GetResult<{
             recipeId: string;
@@ -88,6 +89,7 @@ export declare class RecipesController {
             name: string;
             description: string | null;
             deletedAt: Date | null;
+            userId: string;
         }, unknown, never> & {}) | null;
         ingredients: (import("@prisma/client/runtime").GetResult<{
             recipeId: string;

@@ -46,5 +46,9 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Boolean)
 ], CreateIngredientDto.prototype, "isInStock", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateIngredientDto.prototype, "userId", void 0);
 exports.CreateIngredientDto = CreateIngredientDto;
 //# sourceMappingURL=create-ingredient.dto.js.map
