@@ -23,6 +23,7 @@ export declare class BrewService {
                     isInStock: boolean;
                     version: number;
                     deletedAt: Date | null;
+                    userId: string;
                 }, unknown, never> & {};
             } & import("@prisma/client/runtime").GetResult<{
                 recipeId: string;
@@ -38,24 +39,25 @@ export declare class BrewService {
                 name: string;
                 description: string | null;
                 deletedAt: Date | null;
+                userId: string;
             }, unknown, never> & {}) | null;
             id: string;
+            createdAt: Date;
+            name: string;
+            deletedAt: Date | null;
             userId: string;
             styleId: string | null;
-            name: string;
             batchLiters: import("@prisma/client/runtime").Decimal;
             ibu: number | null;
             colorSrm: number | null;
             alcoholPercent: import("@prisma/client/runtime").Decimal | null;
-            deletedAt: Date | null;
-            createdAt: Date;
             updatedAt: Date;
         } | null;
         id: string;
+        createdAt: Date;
+        deletedAt: Date | null;
         userId: string;
         batchLiters: import("@prisma/client/runtime").Decimal;
-        deletedAt: Date | null;
-        createdAt: Date;
         updatedAt: Date;
         recipeId: string;
         status: import(".prisma/client").BrewStatus;

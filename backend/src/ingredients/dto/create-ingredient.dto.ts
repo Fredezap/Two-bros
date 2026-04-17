@@ -27,4 +27,8 @@ export class CreateIngredientDto {
 
   @IsOptional()
   isInStock?: boolean
+
+  // Relación obligatoria con usuario
+  @IsString()
+  userId!: string
 }

@@ -18,24 +18,28 @@ export declare class StylesController {
         name: string;
         description: string | null;
         deletedAt: Date | null;
+        userId: string;
     }, unknown, never> & {})[]>;
     create(payload: CreateStyleDto): Promise<import("@prisma/client/runtime").GetResult<{
         id: string;
         name: string;
         description: string | null;
         deletedAt: Date | null;
+        userId: string;
     }, unknown, never> & {}>;
     update(id: string, payload: UpdateStyleDto): Promise<import("@prisma/client/runtime").GetResult<{
         id: string;
         name: string;
         description: string | null;
         deletedAt: Date | null;
+        userId: string;
     }, unknown, never> & {}>;
     remove(id: string): Promise<import("@prisma/client/runtime").GetResult<{
         id: string;
         name: string;
         description: string | null;
         deletedAt: Date | null;
+        userId: string;
     }, unknown, never> & {}>;
 }
 export {};

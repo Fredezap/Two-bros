@@ -18,7 +18,13 @@ export class IngredientsService {
     const exists = await this.prisma.ingredient.findFirst({ where: { name: dto.name, deletedAt: null } });
     if (exists) throw new ConflictException('Ya existe un ingrediente con ese nombre');
     try {
-      const ingredient = await this.prisma.ingredient.create({ data: dto });
+      const { userId, ...rest } = dto;
+      const ingredient = await this.prisma.ingredient.create({
+        data: {
+          ...rest,
+          user: { connect: { id: userId } },
+        },
+      });
       return ingredient;
     } catch (error: any) {
       if (error.code === 'P2002') {

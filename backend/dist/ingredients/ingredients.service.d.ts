@@ -13,6 +13,7 @@ export declare class IngredientsService {
         isInStock: boolean;
         version: number;
         deletedAt: Date | null;
+        userId: string;
     }, unknown, never> & {})[]>;
     create(dto: CreateIngredientDto): Promise<import("@prisma/client/runtime").GetResult<{
         id: string;
@@ -24,6 +25,7 @@ export declare class IngredientsService {
         isInStock: boolean;
         version: number;
         deletedAt: Date | null;
+        userId: string;
     }, unknown, never> & {}>;
     update(id: string, dto: any): Promise<import("@prisma/client/runtime").GetResult<{
         id: string;
@@ -35,6 +37,7 @@ export declare class IngredientsService {
         isInStock: boolean;
         version: number;
         deletedAt: Date | null;
+        userId: string;
     }, unknown, never> & {}>;
     softDelete(id: string): Promise<import("@prisma/client/runtime").GetResult<{
         id: string;
@@ -46,5 +49,6 @@ export declare class IngredientsService {
         isInStock: boolean;
         version: number;
         deletedAt: Date | null;
+        userId: string;
     }, unknown, never> & {}>;
 }

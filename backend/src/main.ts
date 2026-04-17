@@ -1,4 +1,3 @@
-
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -9,7 +8,10 @@ async function bootstrap() {
   app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
   app.enableCors({
-    origin: 'http://localhost:5173',
+    origin: [
+      'http://localhost:4200',
+      'http://localhost:5173'
+    ],
     credentials: true,
   });
   const port = process.env.PORT ?? 4300;

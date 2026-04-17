@@ -11,4 +11,5 @@ export declare class CreateIngredientDto {
     stock: number;
     reorderThreshold?: number;
     isInStock?: boolean;
+    userId: string;
 }

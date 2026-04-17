@@ -10,7 +10,10 @@ async function bootstrap() {
     app.use(cookieParser());
     app.useGlobalPipes(new common_1.ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
     app.enableCors({
-        origin: 'http://localhost:5173',
+        origin: [
+            'http://localhost:4200',
+            'http://localhost:5173'
+        ],
         credentials: true,
     });
     const port = (_a = process.env.PORT) !== null && _a !== void 0 ? _a : 4300;
