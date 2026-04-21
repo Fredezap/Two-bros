@@ -1,3 +1,11 @@
+# Ignorar todos los .env excepto .env.example
+# Ignorar todos los .env excepto .env.example
+*.env*
+!.env.example
+frontend/.env*
+!frontend/.env.example
+backend/.env*
+!backend/.env.example
 # Ignorar carpetas del frontend
 frontend/dist/
 frontend/node_modules/
@@ -50,6 +58,7 @@ lerna-debug.log*
 
 # dotenv environment variable files
 **/.env*
+!**/.env.example
 
 # temp directory
 .temp
