@@ -255,7 +255,6 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
     const [newIngredientIndex, setNewIngredientIndex] = useState(null);
     const handleIngredientChange = useCallback((index, field, value, type = 'number') => {
         setFormData(prev => {
-            console.log('[DEBUG] Ingredientes antes de cambio', prev.ingredients);
             const newIngredients = prev.ingredients.map((ing, i) => {
                 if (i !== index) return ing;
                 let updated = { ...ing };
@@ -290,7 +289,6 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
                 }
                 return updated;
             });
-            console.log('[DEBUG] Ingredientes después de cambio', newIngredients);
             return { ...prev, ingredients: newIngredients };
         });
     }, []);
@@ -396,13 +394,7 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
             } else {
                 payload.styleId = null;
             }
-            // Log del payload antes de enviar
-            console.log("user al guardar receta:", user);
             if (isCreating) {
-                if (user) {
-                    payload.userId = user.id;
-                }
-                console.log('[RecipeFormModal] Payload enviado:', JSON.stringify(payload, null, 2));
                 await recipesApi.create(payload);
             } else {
                 await recipesApi.update(formData.id, payload);
@@ -413,7 +405,6 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
             toast.success(isCreating ? 'Receta creada con éxito!' : 'Receta actualizada con éxito!');
             handleClose();
         } catch (error) {
-            console.log("[ERROR] Al guardar receta:", error);
             toast.error(isCreating ? `Error al guardar: ${error.response?.data?.message || error.message}` :
             `Error al actualizar: ${error.response?.data?.message || error.message}`);
         }
@@ -462,8 +453,7 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
                 batchLiters: Number(recipe.batchLiters) || recipe.batchLiters,
                 status: BREW_STATUS.IN_PROGRESS,
                 brewDate: new Date().toISOString(),
-                // Solo guardar nota si existe
-                notes: formData.details.notes && formData.details.notes.trim() !== '' ? formData.details.notes : undefined,
+                // No copiar la nota de la receta como nota de cocción
                 ...(force ? { force: true } : {}),
                 userId: user?.id ?? null
             };
@@ -549,9 +539,12 @@ const handleScale = async () => {
         }));
         setIsScaling(true);
         setStatusMessage({ type: 'info', message: `Escalando ingredientes a ${newSize}L...` });
-        // Log del payload enviado al escalar
-        // Actualizar ingredientes y batchLiters en el backend
-        await recipesApi.update(formData.id, { ingredients: scaledIngredients, batchLiters: newSize });
+        // Limpiar payload: solo enviar campos válidos
+        const payload = {
+            batchLiters: newSize,
+            ingredients: scaledIngredients
+        };
+        await recipesApi.update(formData.id, payload);
         setStatusMessage(null)
         // Actualizar recetas en frontend
         const allRecipes = await recipesApi.getAll();

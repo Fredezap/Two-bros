@@ -1,7 +1,11 @@
 
-import { IsString, IsOptional, IsNumber, IsUUID, IsObject, IsArray } from 'class-validator';
+
+import { IsOptional, IsNumber, IsUUID, IsString } from 'class-validator';
 
 export class UpdateRecipeDto {
+	@IsOptional()
+	@IsString()
+	userId?: string;
 	@IsOptional()
 	@IsUUID()
 	styleId?: string;
@@ -27,7 +31,6 @@ export class UpdateRecipeDto {
 	alcoholPercent?: number;
 
 	@IsOptional()
-	@IsObject()
 	details?: {
 		og?: number | null;
 		fg?: number | null;
@@ -37,6 +40,5 @@ export class UpdateRecipeDto {
 	};
 
 	@IsOptional()
-	@IsArray()
 	ingredients?: any[];
 }

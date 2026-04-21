@@ -18,6 +18,8 @@ const parse_uuid_pipe_1 = require("../pipes/parse-uuid.pipe");
 const recipes_service_1 = require("./recipes.service");
 const jwt_auth_guard_1 = require("../users/jwt-auth.guard");
 const create_recipe_dto_1 = require("./dto/create-recipe.dto");
+const update_recipe_dto_1 = require("./dto/update-recipe.dto");
+const userid_inject_interceptor_1 = require("./userid-inject.interceptor");
 let RecipesController = class RecipesController {
     constructor(recipesService) {
         this.recipesService = recipesService;
@@ -48,9 +50,13 @@ let RecipesController = class RecipesController {
             throw new common_1.UnauthorizedException('No autorizado');
         return this.recipesService.findOne(id, userId);
     }
-    async update(id, updateRecipeDto, res) {
+    async update(id, updateRecipeDto, req, res) {
+        var _a;
         try {
-            const result = await this.recipesService.update(id, updateRecipeDto);
+            const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.sub;
+            if (!userId)
+                throw new common_1.UnauthorizedException('No autorizado');
+            const result = await this.recipesService.update(id, Object.assign(Object.assign({}, updateRecipeDto), { userId }));
             return res.status(200).json(result);
         }
         catch (error) {
@@ -66,7 +72,8 @@ let RecipesController = class RecipesController {
 };
 __decorate([
     (0, common_1.Post)(),
-    (0, common_1.Post)(),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.UseInterceptors)(userid_inject_interceptor_1.UserIdInjectInterceptor),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
@@ -92,11 +99,13 @@ __decorate([
 ], RecipesController.prototype, "findOne", null);
 __decorate([
     (0, common_1.Put)(':id'),
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id', new parse_uuid_pipe_1.ParseUUIDPipe())),
     __param(1, (0, common_1.Body)()),
-    __param(2, (0, common_1.Res)()),
+    __param(2, (0, common_1.Req)()),
+    __param(3, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object, Object]),
+    __metadata("design:paramtypes", [String, update_recipe_dto_1.UpdateRecipeDto, Object, Object]),
     __metadata("design:returntype", Promise)
 ], RecipesController.prototype, "update", null);
 __decorate([

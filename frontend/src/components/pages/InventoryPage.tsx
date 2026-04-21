@@ -89,7 +89,7 @@ const InventoryPage: React.FC = () => {
     try {
       if (!data.id) {
         // Crear nuevo ingrediente vía API
-        const created = await ingredientsApi.create(data)
+        const created = await ingredientsApi.create(data);
         createdOrUpdated = true;
       } else {
         // Edición vía API
@@ -246,7 +246,7 @@ const InventoryPage: React.FC = () => {
             setRestockId={setRestockId} restockId={restockId} stockIngredients={stockIngredients} lowStockAlert={lowStockAlert} 
             requestSort={requestSort} getSortIcon={getSortIcon} handleQuickRestock={handleQuickRestock} handleRestockCustom={handleRestockCustom} 
             setRestockAmount={setRestockAmount} restockAmount={restockAmount} removeStockId={removeStockId} setRemoveStockId={setRemoveStockId} 
-            handleRemoveStockCustom={handleRemoveStockCustom} activeIngredients={activeIngredients}
+            handleRemoveStockCustom={handleRemoveStockCustom} activeIngredients={stockIngredients}
             onRemoveFromStock={onRemoveFromStock}
           />
           {removeFromStockId && (

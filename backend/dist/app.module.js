@@ -8,7 +8,6 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
-const logger_middleware_1 = require("./logger.middleware");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const prisma_service_1 = require("./prisma.service");
@@ -25,11 +24,6 @@ const users_service_1 = require("./users/users.service");
 const email_service_1 = require("./users/email.service");
 const jwt_service_1 = require("./users/jwt.service");
 let AppModule = class AppModule {
-    configure(consumer) {
-        consumer
-            .apply(logger_middleware_1.LoggerMiddleware)
-            .forRoutes({ path: '*', method: common_1.RequestMethod.ALL });
-    }
 };
 AppModule = __decorate([
     (0, common_1.Module)({

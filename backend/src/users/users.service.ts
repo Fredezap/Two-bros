@@ -43,8 +43,6 @@ export class UsersService {
           verificationToken: token,
         },
       });
-      console.log('[VERIFY EMAIL] Token recibido:', token);
-      console.log('[VERIFY EMAIL] Usuario encontrado:', user?.email, 'isEmailVerified:', user?.isEmailVerified, 'verificationTokenExpires:', user?.verificationTokenExpires);
       if (!user) throw new BadRequestException('Token inválido o expirado');
       if (user.isEmailVerified) {
         return { message: 'El email ya está verificado.' };
@@ -54,7 +52,6 @@ export class UsersService {
         if (user.isEmailVerified) {
           return { message: 'El email ya está verificado.' };
         }
-        console.log('[VERIFY EMAIL] Token expirado. Fecha expiración:', user.verificationTokenExpires, 'Ahora:', new Date());
         throw new BadRequestException('Token inválido o expirado');
       }
       await this.prisma.user.update({
@@ -65,7 +62,6 @@ export class UsersService {
           verificationTokenExpires: null,
         },
       });
-      console.log('[VERIFY EMAIL] Email verificado correctamente para:', user.email);
       return { message: 'Email verificado correctamente.' };
     }
 
@@ -84,8 +80,6 @@ export class UsersService {
       // Si la cuenta sigue bloqueada, mostrar mensaje con hora exacta
       const unlockDate = new Date(user.lockUntil);
       const now = new Date();
-      console.log('Cuenta bloqueada hasta:', unlockDate);
-      console.log('Hora actual:', now);
       if (unlockDate > now) {
         // Formatear hora HH:mm:ss
         const unlockTime = unlockDate.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -199,17 +193,13 @@ export class UsersService {
   }
 
     async forgotPassword(email: string) {
-    console.log('[forgotPassword] Solicitud recibida para:', email);
       const normalizedEmail = email.trim().toLowerCase();
       const user = await this.prisma.user.findFirst({
         where: { email: normalizedEmail },
       });
-    console.log("usuario encontrado:", user);
     if (!user) {
-        console.log('[forgotPassword] Usuario NO encontrado:', normalizedEmail);
       return { success: false, message: 'Usuario no encontrado.' };
     }
-    console.log('[forgotPassword] Usuario encontrado, enviando email:', user.email);
     const resetToken = uuidv4();
     const resetTokenExpires = new Date(Date.now() + 1000 * 60 * 60); // 1 hora
     await this.prisma.user.update({
@@ -220,7 +210,6 @@ export class UsersService {
       await this.emailService.sendResetPasswordEmail(user.email, resetToken);
       return { success: true, message: 'Si el email existe, se enviará un enlace para restablecer la contraseña.' };
     } catch (error) {
-      console.error('Error enviando email de recuperación de contraseña:', error);
       return { success: false, message: 'No se pudo enviar el email de recuperación de contraseña.' };
     }
   }
@@ -258,7 +247,6 @@ export class UsersService {
 
 
   async refreshAccessToken(refreshToken: string, req: any, res: any) {
-    console.log('[BACK] refreshAccessToken - token recibido:', refreshToken);
     // Buscar el token en la base
     const dbTokens = await this.prisma.refreshToken.findMany({
       where: { revokedAt: null },
@@ -272,11 +260,9 @@ export class UsersService {
       }
     }
     if (!found) {
-      console.warn('[BACK] refreshAccessToken - Token no encontrado en DB');
       throw new BadRequestException('Refresh token inválido');
     }
     if (found.expiresAt < new Date()) {
-      console.warn('[BACK] refreshAccessToken - Token expirado en DB:', found.expiresAt, 'ahora:', new Date());
       throw new BadRequestException('Refresh token expirado');
     }
 
@@ -285,13 +271,16 @@ export class UsersService {
     try {
       payload = this.jwtService.verify(refreshToken);
     } catch (e) {
-      console.warn('[BACK] refreshAccessToken - JWT inválido:', e);
       throw new BadRequestException('Refresh token inválido');
     }
 
+    // Validar que el usuario existe y no está eliminado
+    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user) {
+      throw new BadRequestException('Usuario no existe');
+    }
     // Emitir nuevo access token
     const accessToken = this.jwtService.sign({ sub: payload.sub, email: payload.email }, '15m');
-    console.log('[BACK] refreshAccessToken - Nuevo access_token emitido para:', payload.email);
     return { accessToken };
   }
 

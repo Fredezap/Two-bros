@@ -16,7 +16,9 @@ export const recipesApi = {
     return res.data
   },
   async update(id: string, payload: Partial<Recipe>): Promise<Recipe> {
-    const res = await api.put(`${API_ROUTES.RECIPES}/${id}`, payload)
+    // Nunca enviar userId al backend en updates
+    const { userId, ...rest } = payload as any;
+    const res = await api.put(`${API_ROUTES.RECIPES}/${id}`, rest)
     return res.data
   },
   async remove(id: string): Promise<void> {
