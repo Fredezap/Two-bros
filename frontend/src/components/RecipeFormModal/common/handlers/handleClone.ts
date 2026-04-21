@@ -34,16 +34,7 @@ const handleClone = async ({ formData, recipes, setRecipes, navigate, setShowMod
     }
     delete payload.style;
     ['userId', 'createdAt', 'updatedAt', 'user'].forEach(k => delete payload[k]);
-    // Obtener usuario desde localStorage
-    let userId = null;
-    try {
-      const stored = localStorage.getItem('user-storage');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        userId = parsed.state?.user?.id || null;
-      }
-    } catch (e) {}
-    if (userId) payload.userId = userId;
+    // No enviar userId, el backend lo obtiene del token/cookie
     await recipesApi.create(payload);
     const allRecipes = await recipesApi.getAll();
     setRecipes && setRecipes(allRecipes);

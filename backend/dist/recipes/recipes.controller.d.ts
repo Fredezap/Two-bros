@@ -9,6 +9,7 @@ interface RequestWithUser extends Request {
 }
 import { RecipesService } from './recipes.service';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
+import { UpdateRecipeDto } from './dto/update-recipe.dto';
 export declare class RecipesController {
     private readonly recipesService;
     constructor(recipesService: RecipesService);
@@ -32,7 +33,6 @@ export declare class RecipesController {
             name: string;
             description: string | null;
             deletedAt: Date | null;
-            userId: string;
         }, unknown, never> & {}) | null;
         ingredients: (import("@prisma/client/runtime").GetResult<{
             recipeId: string;
@@ -89,7 +89,6 @@ export declare class RecipesController {
             name: string;
             description: string | null;
             deletedAt: Date | null;
-            userId: string;
         }, unknown, never> & {}) | null;
         ingredients: (import("@prisma/client/runtime").GetResult<{
             recipeId: string;
@@ -127,7 +126,7 @@ export declare class RecipesController {
         createdAt: Date;
         updatedAt: Date;
     }, unknown, never> & {}>;
-    update(id: string, updateRecipeDto: any, res: Response): Promise<Response<any, Record<string, any>>>;
+    update(id: string, updateRecipeDto: UpdateRecipeDto, req: RequestWithUser, res: Response): Promise<Response<any, Record<string, any>>>;
     softDelete(id: string): Promise<import("@prisma/client/runtime").GetResult<{
         id: string;
         userId: string;

@@ -37,6 +37,20 @@ let StylesService = class StylesService {
     }
     async update(id, payload) {
         var _a, _b;
+        const activeRecipes = await this.prisma.recipe.findMany({
+            where: {
+                styleId: id,
+                deletedAt: null,
+            },
+        });
+        if (activeRecipes.length > 0) {
+            const allowedFields = ['stock'];
+            const keys = Object.keys(payload);
+            const onlyAllowed = keys.every(k => allowedFields.includes(k));
+            if (!onlyAllowed) {
+                throw new common_1.ConflictException('Solo se puede modificar el stock porque el estilo está asociado a una o más recetas activas.');
+            }
+        }
         try {
             return await this.prisma.style.update({
                 where: { id },

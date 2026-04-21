@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, Put, Res, UseGuards, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UsePipes, ValidationPipe, Put, Res, UseGuards, Req, UnauthorizedException, UseInterceptors } from '@nestjs/common';
 import { Response, Request } from 'express';
 type JwtPayload = { sub: string; email: string };
 interface RequestWithUser extends Request {
@@ -8,6 +8,8 @@ import { ParseUUIDPipe } from '../pipes/parse-uuid.pipe';
 import { RecipesService } from './recipes.service';
 import { JwtAuthGuard } from '../users/jwt-auth.guard';
 import { CreateRecipeDto } from './dto/create-recipe.dto';
+import { UpdateRecipeDto } from './dto/update-recipe.dto';
+import { UserIdInjectInterceptor } from './userid-inject.interceptor';
 
 @Controller('api/recipes')
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
@@ -15,7 +17,8 @@ export class RecipesController {
   constructor(private readonly recipesService: RecipesService) {}
 
   @Post()
-  @Post()
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(UserIdInjectInterceptor)
   async create(@Body() createRecipeDto: CreateRecipeDto, @Res() res: Response) {
     try {
       const result = await this.recipesService.create(createRecipeDto);
@@ -45,16 +48,23 @@ export class RecipesController {
   }
 
   @Put(':id')
-  async update(@Param('id', new ParseUUIDPipe()) id: string, @Body() updateRecipeDto: any, @Res() res: Response) {
+  @UseGuards(JwtAuthGuard)
+  async update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() updateRecipeDto: UpdateRecipeDto,
+    @Req() req: RequestWithUser,
+    @Res() res: Response
+  ) {
     try {
-      const result = await this.recipesService.update(id, updateRecipeDto);
+      const userId = req.user?.sub;
+      if (!userId) throw new UnauthorizedException('No autorizado');
+      // Pasar userId al service
+      const result = await this.recipesService.update(id, { ...updateRecipeDto, userId });
       return res.status(200).json(result);
     } catch (error: any) {
       if (error.getStatus && error.getResponse) {
-        // Es una excepción de Nest (como BadRequestException)
         return res.status(error.getStatus()).json({ message: error.getResponse().message || error.message });
       }
-      // Otro error
       return res.status(500).json({ message: error.message || 'Internal server error' });
     }
   }

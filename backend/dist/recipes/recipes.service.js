@@ -29,12 +29,15 @@ let RecipesService = class RecipesService {
     }
     async create(createRecipeDto) {
         var _a;
-        const { styleId, ingredients } = createRecipeDto, rest = __rest(createRecipeDto, ["styleId", "ingredients"]);
-        const data = Object.assign({}, rest);
+        const { styleId, ingredients, userId } = createRecipeDto, rest = __rest(createRecipeDto, ["styleId", "ingredients", "userId"]);
+        if (!userId || typeof userId !== 'string') {
+            throw new common_1.BadRequestException('userId faltante o inválido');
+        }
+        const data = Object.assign(Object.assign({}, rest), { user: { connect: { id: userId } } });
         if (styleId) {
             data.style = { connect: { id: styleId } };
         }
-        const exists = await this.prisma.recipe.findFirst({ where: { name: data.name, deletedAt: null } });
+        const exists = await this.prisma.recipe.findFirst({ where: { name: data.name, deletedAt: null, userId } });
         if (exists)
             throw new common_1.ConflictException('Ya existe una receta con ese nombre');
         if (!ingredients || ingredients.length === 0) {
@@ -92,7 +95,22 @@ let RecipesService = class RecipesService {
         if (!recipe || recipe.deletedAt) {
             throw new common_1.NotFoundException('Recipe not found');
         }
-        const { ingredients, styleId } = updateRecipeDto, rest = __rest(updateRecipeDto, ["ingredients", "styleId"]);
+        const activeBrews = await this.prisma.brew.findMany({
+            where: {
+                recipeId: id,
+                deletedAt: null,
+            },
+        });
+        if (activeBrews.length > 0) {
+            throw new common_1.ConflictException('No se puede editar la receta porque está asociada a una o más cocciones activas.');
+        }
+        const _b = updateRecipeDto, { ingredients, styleId, userId } = _b, rest = __rest(_b, ["ingredients", "styleId", "userId"]);
+        if (!userId || typeof userId !== 'string') {
+            throw new common_1.BadRequestException('userId faltante o inválido');
+        }
+        if (recipe.userId !== userId) {
+            throw new common_1.BadRequestException('No tienes permiso para modificar esta receta');
+        }
         if (Array.isArray(ingredients)) {
             const seen = new Set();
             for (const ing of ingredients) {
@@ -101,7 +119,6 @@ let RecipesService = class RecipesService {
                     key = `${ing.ingredientId}__${ing.usageMoment}__${(_a = ing.time) !== null && _a !== void 0 ? _a : 'null'}`;
                 }
                 if (seen.has(key)) {
-                    ;
                     throw new common_1.BadRequestException('No puede haber ingredientes duplicados con el mismo ingrediente, momento y tiempo en la receta.');
                 }
                 seen.add(key);

@@ -53,31 +53,23 @@ let UsersController = class UsersController {
         return { message: 'Email verificado correctamente.' };
     }
     async sendUnlockEmail(dto) {
-        console.log('POST /users/send-unlock-email recibido. Email:', dto.email);
         const user = await this.prisma.user.findUnique({ where: { email: dto.email.trim().toLowerCase() } });
-        console.log('Usuario encontrado:', user ? user.email : null);
         if (!user) {
-            console.log('No se encontró el usuario');
             return { success: false, message: 'Usuario no encontrado.' };
         }
         if (!user.lockUntil || user.lockUntil < new Date()) {
-            console.log('La cuenta no está bloqueada actualmente. No es necesario desbloquear. lockUntil:', user.lockUntil, 'now:', new Date());
             return { success: false, message: 'La cuenta ya no está bloqueada. Intenta iniciar sesión normalmente.' };
         }
         const unlockToken = require('uuid').v4();
         const unlockTokenExpires = new Date(Date.now() + 30 * 60 * 1000);
-        console.log('Token generado/enviado:', unlockToken, 'Expira:', unlockTokenExpires);
         await this.prisma.user.update({
             where: { id: user.id },
             data: { verificationToken: unlockToken, verificationTokenExpires: unlockTokenExpires },
         });
-        console.log('Antes de enviar email de desbloqueo...');
         try {
             await this.usersService['emailService'].sendAccountLockedEmail(user.email, unlockToken);
-            console.log('Email de desbloqueo enviado a:', user.email);
         }
         catch (err) {
-            console.error('Error enviando email de desbloqueo:', err);
             return { success: false, message: 'Error enviando email de desbloqueo.' };
         }
         return { success: true, message: 'Correo de desbloqueo reenviado.' };
@@ -106,7 +98,6 @@ let UsersController = class UsersController {
     async register(dto) {
         const res = await this.usersService.register(dto);
         const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
-        console.log('[REGISTER] Usuario creado:', user === null || user === void 0 ? void 0 : user.email, 'isEmailVerified:', user === null || user === void 0 ? void 0 : user.isEmailVerified);
         return res;
     }
     async verifyEmail(dto) {
@@ -119,7 +110,6 @@ let UsersController = class UsersController {
         return this.usersService.resetPassword(dto.token, dto.newPassword);
     }
     async login(dto, req, res) {
-        console.log('[LOGIN] Intento de login:', dto.email);
         let ip = req.ip;
         const xff = req.headers['x-forwarded-for'];
         if (Array.isArray(xff))
@@ -134,7 +124,6 @@ let UsersController = class UsersController {
             userAgent = ua;
         try {
             const result = await this.usersService.login(Object.assign(Object.assign({}, dto), { ip, userAgent, res }));
-            console.log('[LOGIN] Login exitoso para:', dto.email);
             return res.json(result);
         }
         catch (err) {
@@ -153,7 +142,6 @@ let UsersController = class UsersController {
             else {
                 errorMsg = String(err);
             }
-            console.error('[LOGIN] Error login para:', dto.email, '\n', errorMsg);
             throw err;
         }
     }
@@ -163,26 +151,20 @@ let UsersController = class UsersController {
         return this.usersService.changePassword(req.user.sub, dto.newPassword);
     }
     async resendVerification(dto) {
-        console.log('POST /users/resend-verification recibido. Email:', dto.email);
         const user = await this.prisma.user.findUnique({ where: { email: dto.email.trim().toLowerCase() } });
-        console.log('Usuario encontrado:', user ? user.email : null, 'isEmailVerified:', user ? user.isEmailVerified : null);
         if (!user) {
-            console.log('No se encontró el usuario');
             return { success: false, message: 'Usuario no encontrado.' };
         }
         if (user.isEmailVerified) {
-            console.log('El email ya está verificado');
             return { success: false, message: 'El email ya está verificado.' };
         }
         const verificationToken = user.verificationToken || require('uuid').v4();
         const verificationTokenExpires = user.verificationTokenExpires || new Date(Date.now() + 1000 * 60 * 60 * 24);
-        console.log('Token generado/enviado:', verificationToken, 'Expira:', verificationTokenExpires);
         await this.prisma.user.update({
             where: { id: user.id },
             data: { verificationToken, verificationTokenExpires },
         });
         await this.usersService['emailService'].sendVerificationEmail(user.email, verificationToken);
-        console.log('Email de verificación enviado a:', user.email);
         return { success: true, message: 'Correo de verificación reenviado.' };
     }
     async me(req) {
@@ -193,9 +175,7 @@ let UsersController = class UsersController {
     async refresh(req, res) {
         var _a;
         const refreshToken = (_a = req.cookies) === null || _a === void 0 ? void 0 : _a.refresh_token;
-        console.log('[BACK] /users/refresh - refresh_token recibido:', refreshToken);
         if (!refreshToken) {
-            console.warn('[BACK] /users/refresh - No refresh token en cookies');
             return res.status(401).json({ message: 'No refresh token' });
         }
         try {
@@ -211,7 +191,6 @@ let UsersController = class UsersController {
             return res.json(result);
         }
         catch (err) {
-            console.error('[BACK] /users/refresh - Error:', err);
             const errorMsg = typeof err === 'object' && err !== null && 'message' in err ? err.message : String(err);
             return res.status(401).json({ message: 'Refresh token inválido o expirado', error: errorMsg });
         }

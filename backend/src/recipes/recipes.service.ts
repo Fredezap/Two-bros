@@ -8,15 +8,18 @@ export class RecipesService {
   constructor(private readonly prisma: PrismaService) {}
 
 async create(createRecipeDto: CreateRecipeDto) {
-    // Separar ingredients del resto
-    const { styleId, ingredients, ...rest } = createRecipeDto;
-    const data: any = { ...rest };
+    // Separar ingredients, styleId y userId del resto
+    const { styleId, ingredients, userId, ...rest } = createRecipeDto;
+    if (!userId || typeof userId !== 'string') {
+      throw new BadRequestException('userId faltante o inválido');
+    }
+    const data: any = { ...rest, user: { connect: { id: userId } } };
     if (styleId) {
       data.style = { connect: { id: styleId } };
     }
 
     // Validar nombre único (no borrado)
-    const exists = await this.prisma.recipe.findFirst({ where: { name: data.name, deletedAt: null } });
+    const exists = await this.prisma.recipe.findFirst({ where: { name: data.name, deletedAt: null, userId } });
     if (exists) throw new ConflictException('Ya existe una receta con ese nombre');
 
     // Si no hay ingredientes, solo crear la receta
@@ -78,8 +81,25 @@ async create(createRecipeDto: CreateRecipeDto) {
     if (!recipe || recipe.deletedAt) {
       throw new NotFoundException('Recipe not found');
     }
-    // Filtrar ingredients y manejar styleId correctamente
-    const { ingredients, styleId, ...rest } = updateRecipeDto;
+    // No permitir editar si tiene cocciones asociadas
+    const activeBrews = await this.prisma.brew.findMany({
+      where: {
+        recipeId: id,
+        deletedAt: null,
+      },
+    });
+    if (activeBrews.length > 0) {
+      throw new ConflictException('No se puede editar la receta porque está asociada a una o más cocciones activas.');
+    }
+    // Filtrar ingredients, styleId y userId correctamente
+    const { ingredients, styleId, userId, ...rest } = updateRecipeDto as any;
+    if (!userId || typeof userId !== 'string') {
+      throw new BadRequestException('userId faltante o inválido');
+    }
+    // Validar que la receta pertenezca al usuario
+    if (recipe.userId !== userId) {
+      throw new BadRequestException('No tienes permiso para modificar esta receta');
+    }
 
     // Validar duplicados (ingredientId + usageMoment [+ time para lúpulos])
     if (Array.isArray(ingredients)) {
@@ -89,7 +109,7 @@ async create(createRecipeDto: CreateRecipeDto) {
         if (ing.usageMoment === 'boil' || ing.usageMoment === 'hopstand' || ing.usageMoment === 'whirlpool' || ing.usageMoment === 'dry_hop') {
           key = `${ing.ingredientId}__${ing.usageMoment}__${ing.time ?? 'null'}`;
         }
-        if (seen.has(key)) {;
+        if (seen.has(key)) {
           throw new BadRequestException('No puede haber ingredientes duplicados con el mismo ingrediente, momento y tiempo en la receta.');
         }
         seen.add(key);
@@ -172,7 +192,7 @@ async create(createRecipeDto: CreateRecipeDto) {
       // DEBUG: Traer todas las brews y loguear
       const allBrews = await this.prisma.brew.findMany();
 
-    // Verificar si hay cocciones (brews) activas asociadas a la receta
+    // Verificar si hay cocciones (brews) activas asociadas a la receta (solo las que no están eliminadas)
     const activeBrews = await this.prisma.brew.findMany({
       where: {
         recipeId: id,

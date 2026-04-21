@@ -55,6 +55,8 @@ model User {
   brews     Brew[]
   refreshTokens RefreshToken[]
 
+  ingredients Ingredient[]
+
   loginAttempts LoginAttempt[]
   devices       UserDevice[]
 
@@ -76,6 +78,8 @@ model Style {
 model Ingredient {
   id        String    @id @default(uuid())
   name      String
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
   // ===================================================================
   // REFRESH TOKENS
   // ===================================================================
@@ -90,7 +94,7 @@ model Ingredient {
 
   recipeIngredients RecipeIngredient[]
 
-  @@unique([name, deletedAt])
+  @@unique([name, userId, deletedAt])
   @@map("ingredients")
 }
 

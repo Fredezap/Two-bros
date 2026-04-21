@@ -40,7 +40,6 @@ export const useDataStore = create<DataState>((set, get) => ({
           recipesApi.getAll(),
           brewsApi.getAll(),
         ])
-
         if (stylesRes.status === 'fulfilled' && Array.isArray(stylesRes.value) && stylesRes.value.length > 0) {
           set({ styles: stylesRes.value })
         } else if (stylesRes.status === 'rejected') {
