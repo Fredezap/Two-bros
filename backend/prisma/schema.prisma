@@ -124,8 +124,8 @@ model Recipe {
 
   name      String
   batchLiters Decimal @map("batch_liters") @db.Decimal(10, 3)
-  ibu       Int?
-  colorSrm  Int?      @map("color_srm")
+  ibu       Decimal?  @db.Decimal(5, 2)
+  colorSrm  Decimal?  @map("color_srm") @db.Decimal(5, 2)
   alcoholPercent Decimal? @map("alcohol_percent") @db.Decimal(4, 2)
   details   Json?     // { og: Float?, fg: Float?, mashWater: Float?, spargeWater: Float?, ... }
   deletedAt DateTime? @map("deleted_at")
