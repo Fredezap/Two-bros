@@ -159,7 +159,7 @@ export class UsersController {
   @Post('resend-verification')
   async resendVerification(@Body() dto: ForgotPasswordDto) {
     // Buscar usuario y reenviar email de verificación si no está verificado
-    const user = await this.prisma.user.findUnique({ where: { email: dto.email.trim().toLowerCase() } });
+    const user = await this.prisma.user.findUnique({ where: { email: dto.email.trim().toLowerCase() } })
     if (!user) {
       return { success: false, message: 'Usuario no encontrado.' };
     }

@@ -3,6 +3,11 @@ import { Beer } from 'lucide-react';
 import { BeerGlassIcon } from '../../common/Icons';
 import EditWarning from './EditWarning';
 
+// todo: cheuquear que en prod este viendose el decimal de IBU.
+// todo: chequear lo de /twobros, que siempre me reedirecciona a futsalforher y demas
+// todo: chequear logeos. No son exitosos y me dice "bienvenido de nuevo".
+// todo: chequeuar la creacion de cuentas y envio de emails.
+
 interface RecipeFormMainDetailsProps {
   isEditing: boolean;
   isCreating: boolean;

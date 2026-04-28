@@ -14,11 +14,6 @@ export const useUserStore = create<UserState>()(
       user: null,
       setUser: (user) => {
         set({ user });
-        setTimeout(() => {
-          try {
-            const persisted = localStorage.getItem('user-storage');
-          } catch (e) { }
-        }, 100);
       },
       clearUser: () => set({ user: null }),
     }),

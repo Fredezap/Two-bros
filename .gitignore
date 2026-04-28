@@ -1,5 +1,3 @@
-# Ignorar todos los .env excepto .env.example
-# Ignorar todos los .env excepto .env.example
 *.env*
 !.env.example
 frontend/.env*
