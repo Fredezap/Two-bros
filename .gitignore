@@ -1,3 +1,6 @@
+# Ignorar todos los archivos .env excepto .env.example
+!.env.example
+.env*
 # Ignorar carpetas del frontend
 frontend/dist/
 frontend/node_modules/
