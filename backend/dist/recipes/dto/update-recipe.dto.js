@@ -15,6 +15,11 @@ class UpdateRecipeDto {
 }
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateRecipeDto.prototype, "userId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsUUID)(),
     __metadata("design:type", String)
 ], UpdateRecipeDto.prototype, "styleId", void 0);
@@ -45,12 +50,10 @@ __decorate([
 ], UpdateRecipeDto.prototype, "alcoholPercent", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsObject)(),
     __metadata("design:type", Object)
 ], UpdateRecipeDto.prototype, "details", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsArray)(),
     __metadata("design:type", Array)
 ], UpdateRecipeDto.prototype, "ingredients", void 0);
 exports.UpdateRecipeDto = UpdateRecipeDto;

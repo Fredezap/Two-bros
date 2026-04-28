@@ -75,7 +75,7 @@ const FermentationSection = ({
       />
     )}
     <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Notas y Observaciones Libres</label>
+      <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Notas y Observaciones</label>
       {(isEditing || isCreating) ? (
         <textarea
           name="notes"

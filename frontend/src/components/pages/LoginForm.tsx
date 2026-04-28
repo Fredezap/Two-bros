@@ -99,7 +99,6 @@ export default function LoginForm() {
           setUnlockAt(null);
           if (data.remainingAttempts !== undefined) {
             setError(`Te quedan ${data.remainingAttempts} intento${data.remainingAttempts === 1 ? '' : 's'}`);
-            // IMPORTANTE: El siguiente log muestra el valor ANTERIOR del estado, porque setError es asíncrono
           }
           if (data.code === 'EMAIL_NOT_VERIFIED') {
             setErrorCode('EMAIL_NOT_VERIFIED');

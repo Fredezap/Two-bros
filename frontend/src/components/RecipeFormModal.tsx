@@ -394,11 +394,7 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
             } else {
                 payload.styleId = null;
             }
-            // Log del payload antes de enviar
             if (isCreating) {
-                if (user) {
-                    payload.userId = user.id;
-                }
                 await recipesApi.create(payload);
             } else {
                 await recipesApi.update(formData.id, payload);
@@ -457,8 +453,7 @@ const RecipeFormModal: React.FC<RecipeFormModalProps> = ({ initialEditMode, onCl
                 batchLiters: Number(recipe.batchLiters) || recipe.batchLiters,
                 status: BREW_STATUS.IN_PROGRESS,
                 brewDate: new Date().toISOString(),
-                // Solo guardar nota si existe
-                notes: formData.details.notes && formData.details.notes.trim() !== '' ? formData.details.notes : undefined,
+                // No copiar la nota de la receta como nota de cocción
                 ...(force ? { force: true } : {}),
                 userId: user?.id ?? null
             };
@@ -544,9 +539,12 @@ const handleScale = async () => {
         }));
         setIsScaling(true);
         setStatusMessage({ type: 'info', message: `Escalando ingredientes a ${newSize}L...` });
-        // Log del payload enviado al escalar
-        // Actualizar ingredientes y batchLiters en el backend
-        await recipesApi.update(formData.id, { ingredients: scaledIngredients, batchLiters: newSize });
+        // Limpiar payload: solo enviar campos válidos
+        const payload = {
+            batchLiters: newSize,
+            ingredients: scaledIngredients
+        };
+        await recipesApi.update(formData.id, payload);
         setStatusMessage(null)
         // Actualizar recetas en frontend
         const allRecipes = await recipesApi.getAll();

@@ -1,4 +1,5 @@
 export declare class CreateRecipeDto {
+    userId: string;
     styleId?: string;
     name: string;
     batchLiters: number;

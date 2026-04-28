@@ -11,6 +11,7 @@ function clearUserStorage() {
   } catch {}
 }
 
+console.log('VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL);
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
   headers: { 'Content-Type': 'application/json' },
@@ -36,8 +37,8 @@ api.interceptors.response.use(
     // Si es 401 y no es el endpoint de refresh ni login
     if (err.response && err.response.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/refresh') && !originalRequest.url.includes('/login')) {
       originalRequest._retry = true;
-        if (typeof document !== 'undefined') {
-          // Siempre intentar refrescar, aunque la cookie sea httpOnly y no visible desde JS
+      if (typeof document !== 'undefined') {
+        // Siempre intentar refrescar, aunque la cookie sea httpOnly y no visible desde JS
         if (isRefreshing) {
           return new Promise(function(resolve, reject) {
             failedQueue.push({resolve, reject});
@@ -51,9 +52,8 @@ api.interceptors.response.use(
           processQueue(null);
           return api(originalRequest);
         } catch (refreshError) {
-          // processQueue(refreshError, null);
-          // await logout();
-          // clearUserStorage();
+          await logout();
+          clearUserStorage();
           if (window.location.pathname !== '/login') {
             window.location.href = '/login';
           }

@@ -6,6 +6,7 @@ export declare class IngredientsService {
     findAll(userId: string): Promise<(import("@prisma/client/runtime").GetResult<{
         id: string;
         name: string;
+        userId: string;
         type: string;
         unitOfMeasure: string;
         stock: import("@prisma/client/runtime").Decimal;
@@ -13,11 +14,11 @@ export declare class IngredientsService {
         isInStock: boolean;
         version: number;
         deletedAt: Date | null;
-        userId: string;
     }, unknown, never> & {})[]>;
     create(dto: CreateIngredientDto): Promise<import("@prisma/client/runtime").GetResult<{
         id: string;
         name: string;
+        userId: string;
         type: string;
         unitOfMeasure: string;
         stock: import("@prisma/client/runtime").Decimal;
@@ -25,11 +26,11 @@ export declare class IngredientsService {
         isInStock: boolean;
         version: number;
         deletedAt: Date | null;
-        userId: string;
     }, unknown, never> & {}>;
-    update(id: string, dto: any): Promise<import("@prisma/client/runtime").GetResult<{
+    update(id: string, dto: any, userId: string): Promise<import("@prisma/client/runtime").GetResult<{
         id: string;
         name: string;
+        userId: string;
         type: string;
         unitOfMeasure: string;
         stock: import("@prisma/client/runtime").Decimal;
@@ -37,11 +38,11 @@ export declare class IngredientsService {
         isInStock: boolean;
         version: number;
         deletedAt: Date | null;
-        userId: string;
     }, unknown, never> & {}>;
-    softDelete(id: string): Promise<import("@prisma/client/runtime").GetResult<{
+    addStock(id: string, amount: number, userId: string): Promise<import("@prisma/client/runtime").GetResult<{
         id: string;
         name: string;
+        userId: string;
         type: string;
         unitOfMeasure: string;
         stock: import("@prisma/client/runtime").Decimal;
@@ -49,6 +50,17 @@ export declare class IngredientsService {
         isInStock: boolean;
         version: number;
         deletedAt: Date | null;
+    }, unknown, never> & {}>;
+    softDelete(id: string, userId: string): Promise<import("@prisma/client/runtime").GetResult<{
+        id: string;
+        name: string;
         userId: string;
+        type: string;
+        unitOfMeasure: string;
+        stock: import("@prisma/client/runtime").Decimal;
+        reorderThreshold: import("@prisma/client/runtime").Decimal;
+        isInStock: boolean;
+        version: number;
+        deletedAt: Date | null;
     }, unknown, never> & {}>;
 }

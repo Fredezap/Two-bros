@@ -55,6 +55,8 @@ model User {
   brews     Brew[]
   refreshTokens RefreshToken[]
 
+  ingredients Ingredient[]
+
   loginAttempts LoginAttempt[]
   devices       UserDevice[]
 
@@ -76,6 +78,8 @@ model Style {
 model Ingredient {
   id        String    @id @default(uuid())
   name      String
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
   // ===================================================================
   // REFRESH TOKENS
   // ===================================================================
@@ -90,7 +94,7 @@ model Ingredient {
 
   recipeIngredients RecipeIngredient[]
 
-  @@unique([name, deletedAt])
+  @@unique([name, userId, deletedAt])
   @@map("ingredients")
 }
 
@@ -120,8 +124,8 @@ model Recipe {
 
   name      String
   batchLiters Decimal @map("batch_liters") @db.Decimal(10, 3)
-  ibu       Int?
-  colorSrm  Int?      @map("color_srm")
+  ibu       Decimal?  @db.Decimal(5, 2)
+  colorSrm  Decimal?  @map("color_srm") @db.Decimal(5, 2)
   alcoholPercent Decimal? @map("alcohol_percent") @db.Decimal(4, 2)
   details   Json?     // { og: Float?, fg: Float?, mashWater: Float?, spargeWater: Float?, ... }
   deletedAt DateTime? @map("deleted_at")

@@ -2,6 +2,8 @@ import { IsString, IsOptional, IsNumber, IsUUID, IsObject, IsArray } from 'class
 
 
 export class CreateRecipeDto {
+  @IsString({ message: 'userId debe ser un string' })
+  userId!: string;
   @IsOptional()
   @IsUUID()
   styleId?: string;

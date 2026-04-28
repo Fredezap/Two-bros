@@ -29,14 +29,14 @@ let IngredientsService = class IngredientsService {
     }
     async findAll(userId) {
         return this.prisma.ingredient.findMany({
-            where: { deletedAt: null },
+            where: { deletedAt: null, userId },
             orderBy: { name: 'asc' },
         });
     }
     async create(dto) {
-        const exists = await this.prisma.ingredient.findFirst({ where: { name: dto.name, deletedAt: null } });
+        const exists = await this.prisma.ingredient.findFirst({ where: { name: dto.name, deletedAt: null, userId: dto.userId } });
         if (exists)
-            throw new common_1.ConflictException('Ya existe un ingrediente con ese nombre');
+            throw new common_1.ConflictException('Ya existe un ingrediente con ese nombre para este usuario');
         try {
             const { userId } = dto, rest = __rest(dto, ["userId"]);
             const ingredient = await this.prisma.ingredient.create({
@@ -51,14 +51,41 @@ let IngredientsService = class IngredientsService {
             throw error;
         }
     }
-    async update(id, dto) {
-        const ingredient = await this.prisma.ingredient.findUnique({ where: { id } });
+    async update(id, dto, userId) {
+        const ingredient = await this.prisma.ingredient.findUnique({ where: { id }, include: { recipeIngredients: true } });
         if (!ingredient || ingredient.deletedAt)
             throw new Error('Ingrediente no encontrado');
+        if (ingredient.userId !== userId)
+            throw new Error('No autorizado para modificar este ingrediente');
+        if (ingredient.recipeIngredients && ingredient.recipeIngredients.length > 0) {
+            const activeLinks = await this.prisma.recipeIngredient.findMany({
+                where: {
+                    ingredientId: id,
+                    recipe: { deletedAt: null },
+                },
+            });
+            if (activeLinks.length > 0) {
+                if ((dto.name && dto.name !== ingredient.name) ||
+                    (dto.type && dto.type !== ingredient.type) ||
+                    (dto.unitOfMeasure && dto.unitOfMeasure !== ingredient.unitOfMeasure)) {
+                    throw new common_1.ConflictException('No se puede modificar el nombre, tipo o unidad de medida porque el ingrediente está relacionado a una o más recetas activas.');
+                }
+                const allowedFields = ['stock', 'reorderThreshold', 'isInStock'];
+                const filteredDto = {};
+                for (const k of allowedFields) {
+                    if (dto.hasOwnProperty(k))
+                        filteredDto[k] = dto[k];
+                }
+                if (Object.keys(filteredDto).length === 0) {
+                    throw new common_1.ConflictException('Solo se puede modificar el stock, el umbral de alerta o la visibilidad en stock porque el ingrediente está relacionado a una o más recetas activas.');
+                }
+                dto = filteredDto;
+            }
+        }
         if (dto.name && dto.name !== ingredient.name) {
-            const exists = await this.prisma.ingredient.findFirst({ where: { name: dto.name, deletedAt: null, NOT: { id } } });
+            const exists = await this.prisma.ingredient.findFirst({ where: { name: dto.name, deletedAt: null, NOT: { id }, userId: ingredient.userId } });
             if (exists)
-                throw new common_1.ConflictException('Ya existe un ingrediente con ese nombre');
+                throw new common_1.ConflictException('Ya existe un ingrediente con ese nombre para este usuario');
         }
         try {
             return await this.prisma.ingredient.update({ where: { id }, data: dto });
@@ -70,13 +97,26 @@ let IngredientsService = class IngredientsService {
             throw error;
         }
     }
-    async softDelete(id) {
+    async addStock(id, amount, userId) {
+        const ingredient = await this.prisma.ingredient.findUnique({ where: { id } });
+        if (!ingredient || ingredient.deletedAt)
+            throw new Error('Ingrediente no encontrado');
+        if (ingredient.userId !== userId)
+            throw new Error('No autorizado para modificar este ingrediente');
+        return this.prisma.ingredient.update({
+            where: { id },
+            data: { stock: { increment: amount }, isInStock: true },
+        });
+    }
+    async softDelete(id, userId) {
         const ingredient = await this.prisma.ingredient.findUnique({
             where: { id },
             include: { recipeIngredients: true },
         });
         if (!ingredient || ingredient.deletedAt)
             throw new Error('Ingrediente no encontrado');
+        if (ingredient.userId !== userId)
+            throw new Error('No autorizado para eliminar este ingrediente');
         if (ingredient.recipeIngredients && ingredient.recipeIngredients.length > 0) {
             const activeLinks = await this.prisma.recipeIngredient.findMany({
                 where: {

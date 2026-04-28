@@ -24,7 +24,6 @@ let EmailService = class EmailService {
     async sendVerificationEmail(to, token) {
         const url = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/verify-email/${token}?email=${encodeURIComponent(to)}`;
         try {
-            console.log('[sendVerificationEmail] Intentando enviar email a:', to, 'con token:', token, 'url:', url);
             const info = await this.transporter.sendMail({
                 from: process.env.SMTP_FROM || 'no-reply@two-bros-brew.com',
                 to,
@@ -32,17 +31,14 @@ let EmailService = class EmailService {
                 html: `<p>Haz clic en el siguiente botón para verificar tu email:</p>
          <p><a href="${url}" style="display:inline-block;padding:8px 28px;background:#b7791f;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">Verificar email</a></p>`
             });
-            console.log('[sendVerificationEmail] Email de verificación enviado:', info);
         }
         catch (err) {
-            console.error('[sendVerificationEmail] Error enviando email de verificación:', err);
             throw err;
         }
     }
     async sendAccountLockedEmail(to, token) {
         const url = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/unlock-account/${token}?email=${encodeURIComponent(to)}`;
         try {
-            console.log('[sendAccountLockedEmail] Intentando enviar email a:', to, 'con token:', token, 'url:', url);
             const info = await this.transporter.sendMail({
                 from: process.env.SMTP_FROM || 'no-reply@two-bros-brew.com',
                 to,
@@ -50,22 +46,13 @@ let EmailService = class EmailService {
                 html: `<p>Tu cuenta ha sido bloqueada por múltiples intentos fallidos de acceso.<br>Para desbloquearla puedes esperar 30 minutos o hacer clic en el siguiente botón para recuperar acceso inmediato:</p>
             <p><a href="${url}" style="display:inline-block;padding:8px 28px;background:#b7791f;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">Recuperar acceso a cuenta</a></p>`
             });
-            console.log('[sendAccountLockedEmail] Email de cuenta bloqueada enviado:', info);
-            if (info && info.accepted && info.accepted.length > 0) {
-                console.log('[sendAccountLockedEmail] Email aceptado por el servidor SMTP:', info.accepted);
-            }
-            else {
-                console.warn('[sendAccountLockedEmail] El servidor SMTP NO aceptó el email:', info);
-            }
         }
         catch (err) {
-            console.error('[sendAccountLockedEmail] Error enviando email de cuenta bloqueada:', err);
             throw err;
         }
     }
     async sendResetPasswordEmail(to, token) {
         const url = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${token}`;
-        console.log(process.env.SMTP_HOST, process.env.SMTP_PORT, process.env.SMTP_USER, process.env.SMTP_PASS, 'Enviando email de restablecimiento de contraseña a:', to);
         try {
             const info = await this.transporter.sendMail({
                 from: process.env.SMTP_FROM || 'no-reply@two-bros-brew.com',
@@ -74,10 +61,8 @@ let EmailService = class EmailService {
                 html: `<p>Haz clic en el siguiente botón para restablecer tu contraseña:</p>
           <p><a href="${url}" style="display:inline-block;padding:8px 28px;background:#b7791f;color:#fff;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">Restablecer contraseña</a></p>`
             });
-            console.log('Email de recuperación de contraseña enviado:', info);
         }
         catch (err) {
-            console.error('Error enviando email de recuperación de contraseña:', err);
             throw new Error('No se pudo enviar el email de recuperación de contraseña.');
         }
     }

@@ -14,6 +14,10 @@ const class_validator_1 = require("class-validator");
 class CreateRecipeDto {
 }
 __decorate([
+    (0, class_validator_1.IsString)({ message: 'userId debe ser un string' }),
+    __metadata("design:type", String)
+], CreateRecipeDto.prototype, "userId", void 0);
+__decorate([
     (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsUUID)(),
     __metadata("design:type", String)

@@ -26,6 +26,21 @@ export class StylesService {
   }
   
   async update(id: string, payload: any) {
+      // Permitir editar solo el stock si tiene recetas activas
+      const activeRecipes = await this.prisma.recipe.findMany({
+        where: {
+          styleId: id,
+          deletedAt: null,
+        },
+      });
+      if (activeRecipes.length > 0) {
+        const allowedFields = ['stock'];
+        const keys = Object.keys(payload);
+        const onlyAllowed = keys.every(k => allowedFields.includes(k));
+        if (!onlyAllowed) {
+          throw new ConflictException('Solo se puede modificar el stock porque el estilo está asociado a una o más recetas activas.');
+        }
+      }
       try {
         return await this.prisma.style.update({
           where: { id },
@@ -44,7 +59,7 @@ export class StylesService {
       throw new BadRequestException('Id is required');
     }
 
-    // Verificar si hay recetas activas asociadas a este estilo
+    // Verificar si hay recetas activas asociadas a este estilo (solo las que no están eliminadas)
     const activeRecipes = await this.prisma.recipe.findMany({
       where: {
         styleId: id,

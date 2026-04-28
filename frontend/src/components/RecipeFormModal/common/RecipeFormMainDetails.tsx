@@ -87,7 +87,7 @@ const RecipeFormMainDetails: React.FC<RecipeFormMainDetailsProps> = ({
             <input type="number" step="0.1" name={key} value={formData[key] ?? ''} onChange={handleMainChange}
               className="w-24 p-2 border border-gray-300 dark:border-gray-600 rounded-lg text-lg text-right bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-indigo-500 focus:border-indigo-500" />
           ) : (
-            <p className="text-lg font-bold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>{Number(formData[key] ?? 0).toFixed(key === 'alcoholPercent' ? 2 : 0)} {unit}</p>
+            <p className="text-lg font-bold text-gray-800 dark:text-gray-200 select-none" style={{ cursor: 'default' }}>{Number(formData[key] ?? 0).toFixed(key === 'alcoholPercent' || key === 'ibu' ? 2 : 0)} {unit}</p>
           )}
         </div>
       ))}

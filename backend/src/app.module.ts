@@ -22,9 +22,5 @@ import { JwtService } from './users/jwt.service';
   providers: [AppService, PrismaService, IngredientsService, StylesService, RecipesService, BrewService, UsersService, EmailService, JwtService],
 })
 export class AppModule {
-  configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(LoggerMiddleware)
-      .forRoutes({ path: '*', method: RequestMethod.ALL });
-  }
+
 }

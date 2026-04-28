@@ -274,6 +274,11 @@ export class UsersService {
       throw new BadRequestException('Refresh token inválido');
     }
 
+    // Validar que el usuario existe y no está eliminado
+    const user = await this.prisma.user.findUnique({ where: { id: payload.sub } });
+    if (!user) {
+      throw new BadRequestException('Usuario no existe');
+    }
     // Emitir nuevo access token
     const accessToken = this.jwtService.sign({ sub: payload.sub, email: payload.email }, '15m');
     return { accessToken };
