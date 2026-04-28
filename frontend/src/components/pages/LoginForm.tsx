@@ -36,14 +36,12 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   // Forzar render inmediato del cartel de bloqueo si unlockAt y errorCode cambian tras el último intento
   useEffect(() => {
-    console.log('[useEffect] errorCode:', errorCode, 'unlockAt:', unlockAt, 'error:', error);
     if (errorCode === 'ACCOUNT_LOCKED' && unlockAt) {
       setError(''); // Limpiar cualquier error para que solo se muestre el cartel de bloqueo
     }
   }, [errorCode, unlockAt]);
   // Log en cada render para ver el valor actualizado de los estados
   useEffect(() => {
-    console.log('[RENDER] error:', error, 'errorCode:', errorCode, 'unlockAt:', unlockAt);
   });
   const login = useLogin();
   const { user } = useAuth();
@@ -68,7 +66,6 @@ export default function LoginForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    console.log('[LoginForm] handleSubmit: email', email);
     try {
       const loginResult = await login({
         email,
@@ -76,13 +73,11 @@ export default function LoginForm() {
         deviceId: getDeviceId(),
         deviceName: getDeviceName(),
       });
-      console.log('[LoginForm] Login exitoso:', loginResult);
       toast.success('¡Bienvenido de nuevo!');
       navigate('/');
       setErrorCode('');
       setUnlockAt(null);
     } catch (err) {
-      console.error('[LoginForm] Error en login:', err);
       let msg = err?.message || 'Error al iniciar sesión';
       let attemptsMsg = '';
       setErrorCode('');
@@ -95,27 +90,22 @@ export default function LoginForm() {
           setErrorCode('ACCOUNT_LOCKED');
           setUnlockAt(data.unlockAt || null);
           setError(''); // Limpiar error para que solo se muestre el cartel de bloqueo
-          console.log('[handleSubmit] BLOQUEO: errorCode=ACCOUNT_LOCKED unlockAt=', data.unlockAt);
         } else if (data.remainingAttempts === 1) {
           setError('¡Último intento antes de que tu cuenta se bloquee!');
           setErrorCode('');
           setUnlockAt(null);
-          console.log('[handleSubmit] QUEDA 1 INTENTO');
         } else {
           setErrorCode('');
           setUnlockAt(null);
           if (data.remainingAttempts !== undefined) {
-            console.log('[handleSubmit] (BACKEND) remainingAttempts:', data.remainingAttempts);
             setError(`Te quedan ${data.remainingAttempts} intento${data.remainingAttempts === 1 ? '' : 's'}`);
             // IMPORTANTE: El siguiente log muestra el valor ANTERIOR del estado, porque setError es asíncrono
-            console.log('[handleSubmit] (ESTADO ANTERIOR) error:', error);
           }
           if (data.code === 'EMAIL_NOT_VERIFIED') {
             setErrorCode('EMAIL_NOT_VERIFIED');
           }
         }
       }
-      console.log('[handleSubmit] errorCode:', errorCode, 'unlockAt:', unlockAt, 'error:', error);
       toast.error(msg === 'Credenciales inválidas' ? 'Credenciales inválidas' : msg);
     }
   };
@@ -174,7 +164,6 @@ export default function LoginForm() {
   if (verifyError && window.history.replaceState) {
     window.history.replaceState({}, document.title, location.pathname);
   }
-console.log("resendLoading:", resendLoading, "email:", email, "unlockShowResend:", unlockShowResend);
   return (
     <div className="max-w-sm mx-auto mt-8 p-4 bg-white rounded shadow">
       {verifySuccessMsg && (

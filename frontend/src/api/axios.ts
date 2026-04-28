@@ -35,9 +35,7 @@ api.interceptors.response.use(
     const originalRequest = err.config;
     // Si es 401 y no es el endpoint de refresh ni login
     if (err.response && err.response.status === 401 && !originalRequest._retry && !originalRequest.url.includes('/refresh') && !originalRequest.url.includes('/login')) {
-      console.warn('[AXIOS] 401 detectado, intentando refresh...', originalRequest.url);
       originalRequest._retry = true;
-      console.log('[AXIOS] document.cookie:', document.cookie);
         if (typeof document !== 'undefined') {
           // Siempre intentar refrescar, aunque la cookie sea httpOnly y no visible desde JS
         if (isRefreshing) {
@@ -49,20 +47,14 @@ api.interceptors.response.use(
         }
         isRefreshing = true;
         try {
-          console.log('[AXIOS] Llamando refreshAccessToken()');
-          // DEBUG: Mostrar cookies antes de llamar al backend
-          console.log('[AXIOS] Cookies antes de refresh:', document.cookie);
           const refreshResult = await refreshAccessToken();
-          console.log('[AXIOS] Refresh exitoso, reintentando request original', refreshResult);
           processQueue(null);
           return api(originalRequest);
         } catch (refreshError) {
-          console.error('[AXIOS] Error al refrescar token:', refreshError);
           // processQueue(refreshError, null);
           // await logout();
           // clearUserStorage();
           if (window.location.pathname !== '/login') {
-            console.warn('[AXIOS] Redirigiendo a /login');
             window.location.href = '/login';
           }
           return Promise.reject(refreshError);

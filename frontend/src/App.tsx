@@ -49,11 +49,8 @@ const App: React.FC = () => {
         return location.pathname === route;
       });
       if (!isPublic) {
-        console.warn('[App] Usuario no autenticado, redirigiendo a HOME desde', location.pathname);
         navigate(ROUTES.HOME, { replace: true });
       }
-    } else {
-      console.log('[App] Usuario autenticado o loading:', { user, loading, pathname: location.pathname });
     }
   }, [user, loading, location.pathname, navigate]);
 

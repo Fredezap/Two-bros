@@ -29,7 +29,6 @@ export const calculateRecipeAvailability = (ingredients: Ingredient[], recipes: 
       // Convertir quantity a número siempre
       const qty = Number(ri.quantity)
       if (!isFinite(qty) || qty <= 0) {
-        console.warn(`[AVAIL] Cantidad inválida para ingrediente ${ri.ingredientName}:`, ri.quantity)
         return
       }
       const prev = requiredTotals.get(ri.ingredientId) || 0
