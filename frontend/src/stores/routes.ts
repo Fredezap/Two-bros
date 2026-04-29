@@ -1,9 +1,9 @@
 // Rutas de API para entidades principales
 export const API_ROUTES = {
-  INGREDIENTS: '/api/ingredients',
-  RECIPES: '/api/recipes',
-  BREWS: '/api/brews',
-  STYLES: '/api/styles',
+  INGREDIENTS: '/ingredients',
+  RECIPES: '/recipes',
+  BREWS: '/brews',
+  STYLES: '/styles',
 };
 
 export const ROUTES = {
@@ -21,18 +21,18 @@ export const ROUTES = {
   PROFILE: '/profile',
 
   // Rutas de usuario (API)
-  USERS: '/api/users',
-  USERS_REGISTER: '/api/users/register',
-  USERS_LOGIN: '/api/users/login',
-  USERS_VERIFY_EMAIL: '/api/users/verify-email',
-  USERS_FORGOT_PASSWORD: '/api/users/forgot-password',
-  USERS_RESET_PASSWORD: '/api/users/reset-password',
-  USERS_RESEND_VERIFICATION: '/api/users/resend-verification',
-  USERS_CHANGE_PASSWORD: '/api/users/change-password',
-  USERS_ME: '/api/users/me',
-  USERS_LOGOUT: '/api/users/logout',
-  USERS_UNLOCK_ACCOUNT: '/api/users/unlock-account',
-  UNLOCK_ACCOUNT_REQUEST: '/api/unlock-account-request',
+  USERS: '/users',
+  USERS_REGISTER: '/users/register',
+  USERS_LOGIN: '/users/login',
+  USERS_VERIFY_EMAIL: '/users/verify-email',
+  USERS_FORGOT_PASSWORD: '/users/forgot-password',
+  USERS_RESET_PASSWORD: '/users/reset-password',
+  USERS_RESEND_VERIFICATION: '/users/resend-verification',
+  USERS_CHANGE_PASSWORD: '/users/change-password',
+  USERS_ME: '/users/me',
+  USERS_LOGOUT: '/users/logout',
+  USERS_UNLOCK_ACCOUNT: '/users/unlock-account',
+  UNLOCK_ACCOUNT_REQUEST: '/unlock-account-request',
 } as const
 
 export const PUBLIC_ROUTES = [
