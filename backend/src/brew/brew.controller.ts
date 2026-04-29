@@ -11,7 +11,7 @@ import { CreateBrewDto } from './dto/create-brew.dto';
 import { UpdateBrewDto } from './dto/update-brew.dto';
 import type { BrewPatchDto } from './brew.service';
 
-@Controller('api/brews')
+@Controller('brews')
 export class BrewController {
   constructor(private readonly brewService: BrewService) {}
 

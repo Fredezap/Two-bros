@@ -11,7 +11,7 @@ import { CreateRecipeDto } from './dto/create-recipe.dto';
 import { UpdateRecipeDto } from './dto/update-recipe.dto';
 import { UserIdInjectInterceptor } from './userid-inject.interceptor';
 
-@Controller('api/recipes')
+@Controller('recipes')
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
 export class RecipesController {
   constructor(private readonly recipesService: RecipesService) {}

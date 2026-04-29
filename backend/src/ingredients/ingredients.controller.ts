@@ -14,7 +14,7 @@ interface RequestWithUser extends Request {
   user?: JwtPayload;
 }
 
-@Controller('api/ingredients')
+@Controller('ingredients')
 @UsePipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }))
 export class IngredientsController {
   constructor(private readonly ingredientsService: IngredientsService) {}

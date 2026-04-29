@@ -10,7 +10,7 @@ import { CreateStyleDto } from './dto/create-style.dto';
 import { StylesService } from './styles.service';
 import { JwtAuthGuard } from '../users/jwt-auth.guard';
 
-@Controller('api/styles')
+@Controller('styles')
 export class StylesController {
   constructor(private readonly stylesService: StylesService) {}
 
